@@ -1,0 +1,26 @@
+{
+  "repository": "https://github.com/hak5/wifipineapplepager-payloads",
+  "revision": "5ed2f6c307880c9201c0f7912da6076caa5cc1d7",
+  "references": [
+    {
+      "path": "library/user/reconnaissance/device_hunter/payload.sh",
+      "sha256": "223dcc7722041b3d3614fbd2c0a77f2ab4cd20295e6aaf2d58d351b4997eeb84",
+      "use": "Independently implemented ideas/attributed identifier hints; no source code redistributed"
+    },
+    {
+      "path": "library/user/reconnaissance/Flock_Detect/payload.sh",
+      "sha256": "6b98fda7ffa98360a4e72c040cba4a7ad67a49c7bf6f2ae3d0ed0fb3030db323",
+      "use": "Independently implemented ideas/attributed identifier hints; no source code redistributed"
+    },
+    {
+      "path": "library/user/reconnaissance/find_hackers/payload.sh",
+      "sha256": "1622b87ccc6e4732c9028d3994af655b756a2f32a8af3c58fdb9274426dd209f",
+      "use": "Independently implemented ideas/attributed identifier hints; no source code redistributed"
+    },
+    {
+      "path": "library/user/reconnaissance/flipper_detector/payload.sh",
+      "sha256": "33c47f79b382ea29270d49435bd2a30307181c7700901a272153108c8cff6794",
+      "use": "Independent weak public-prefix hint and cache-only diagnostics; no source code redistributed"
+    }
+  ]
+}

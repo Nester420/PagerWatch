@@ -1,0 +1,109 @@
+PAGERWATCH 1.0.8 — FIELD CHECK
+
+1. Start: check Field reliability and confirm active capture interface.
+   Receiving observations confirms reception. Quiet RF alone is not failure.
+2. USB: plug in, unplug, and replug your supported external adapter.
+   Confirm the source switches and the dashboard remains reachable.
+3. Manual fallback: pin the external adapter, unplug it and confirm a retry
+   is reported. Return to Auto to enable Pager fallback.
+4. Phone connection: briefly disconnect Wi-Fi, then reconnect. Confirm the
+   snapshot warning clears. Keep GPS sharing open and verify a NEW fix.
+5. GPS: temporarily deny/disable location. Confirm stale readings stop being
+   used; re-enable permission and share again. Check the GPS-gap counter.
+6. Interrupted run: use a disposable test session. After a checkpoint and
+   some sightings, interrupt the payload process. Relaunch, then review the
+   prior run in Sessions. Verify complete sightings and the recovery notice.
+   Do not deliberately cut power to a card holding your only copy of logs.
+7. Storage: check free space and journal usage. Use a disposable test setup
+   to reach the configured log limit. Confirm the warning stays visible.
+8. Load: compare response and queue drops with a crowded device list. Export
+   diagnostics if the UI stalls; memory/CPU and recovery events are included.
+9. Update: preserve config.json and .state. Copy the complete release. If a
+   mixed-file warning appears, replace all release files, then relaunch.
+
+10. Known gear: mark your own address, toggle Hide known devices, and verify
+    it disappears from live radar/lists. Choose Known devices in inventory to
+    find it again. Check Watchlist > Known devices after it leaves the live
+    inventory; unmarking must preserve any label/bookmark. Confirm exports
+    still include the address. Privacy must mask known-device details.
+11. Compare: finish two short runs with one shared address and a new address.
+    Compare them in Sessions. Check new/returning/not-seen lists, Privacy
+    masking and the partial-inventory warning when a run has evictions.
+12. Signal: track a device with changing RSSI. Check latest vs average, then
+    stop its transmissions. Average/live sound must expire after ten seconds.
+13. GPS coverage: record before sharing GPS, with a fresh fix, then with a
+    stale fix. Counts must sum to accepted observations. Review/export the
+    finished run. Low-accuracy fixes should be counted if your phone supplies
+    them; do not spoof coordinates in a run you intend to keep.
+14. Cleanup: create disposable runs, select one, review size, cancel, then
+    select again and confirm permanent deletion. Check files are gone and
+    the active run cannot be selected/deleted. Do not use your only logs.
+
+15. Native menus: without using the dashboard controls, open FIELD and scroll
+    through all nine options. Check run summary, GPS status and return with B.
+    Phone GPS still requires the phone to share its location.
+16. Device actions: A in details opens actions; mark known, bookmark and toggle
+    an address watch. Verify these changes appear in the dashboard and remain
+    after relaunch. Confirm Right still tracks and exclusion can be cancelled.
+17. Native Privacy: enable it, then view GPS, known gear, saved inventory and
+    comparisons. Identifiers/coordinates/movement must be masked; address
+    editing is blocked until Privacy is off.
+18. Native saved runs: browse pages, review a run, compare vs current and
+    change categories. Cancel a loading view: it must not reopen on completion.
+    On disposable data only, preview/cancel deletion, then confirm another
+    deletion. The active run must remain protected. Capture should continue.
+
+19. Research: open a device in the dashboard. Inspect matched conditions and
+    source references. Save notes/links, attach a small JPEG/PNG, reload, and
+    verify both persist. Concurrent stale saves should report a conflict.
+20. History: finish two test runs with a shared address, then research that
+    address. Verify times, source-count labels and receiver GPS locations.
+    Check older pages and partial-read warnings. Rotated addresses stay apart.
+21. Research Privacy: open photos/notes/history, enable Privacy and confirm
+    sensitive details disappear. Turn it off and check your unsaved draft is
+    retained. On the Pager, research details must also stay masked.
+22. Evidence: export the device ZIP. Open report.html on your Windows PC;
+    inspect JSON, photos and source links. Verify SHA256SUMS if needed.
+    Exports retain originals and contain the selected history page only.
+23. Native research: open Device actions > Research / past sightings. Scroll
+    notes/evidence and page through history. B must return correctly; cancel
+    a pending read and ensure it does not reopen after you leave the screen.
+
+Record Pager firmware, adapter model/driver, active interface and test result.
+Host tests simulate faults; this checklist validates behavior on your hardware.
+
+RECON CLEANUP CHECK — 1.0.8
+- Confirm Handshakes and deauth controls are absent from the dashboard and
+  Pager device menus. Device actions should wrap correctly through six items.
+- Launch after an overwrite update. The retired module should be removed;
+  config.json, .state and all saved session folders must stay intact.
+- Leave your supported USB adapter plugged in at startup. In Auto, verify it
+  becomes the receiver without repeated replugs. Unplug and confirm fallback
+  to Pager Wi-Fi. Replug and check automatic selection; try manual fallback.
+- Open Devices, radar, coverage, Phone GPS, research and Sessions. Confirm
+  current observations, Privacy, receiver health and exports still work.
+- Recheck GPS coordinates, speed, heading, fresh-fix tagging and recovery after
+  a brief phone disconnect. Quiet RF must not trigger receiver resets.
+- Download diagnostics after any remaining error and note the active adapter.
+
+MAC DETECTION CHECK — 1.0.8
+- Compare the exact observed MAC and Wi-Fi/Bluetooth type with your other
+  detector. Find the same address in PagerWatch Devices, not only Alerts.
+- A B4:1E:52 Wi-Fi transmitter or public Bluetooth address should show the
+  Flock Safety radio hint, even with no name. Default alert threshold is 75;
+  a higher saved threshold or known/excluded device settings may suppress it.
+- Random/unknown Bluetooth addresses must not gain a vendor from their MAC.
+- Test 2.4 GHz mode near the camera and check active receiver health. Missing
+  reception is separate from a received address with no signature match.
+- If still missed, save diagnostics and record the other detector's MAC,
+  protocol, channel and timestamp. Do not assume a shared chipset is Flock.
+
+WARDRIVE PROBE CHECK — 1.0.8
+- Near your local camera, compare its exact MAC in Wardrive Go and PagerWatch.
+  Try 2.4 GHz mode and confirm the active receiver is receiving traffic.
+- For a listed shared prefix sending a wildcard probe, expect Possible Flock
+  wildcard probe, not a confirmed camera/model label. Default threshold is 75.
+- A directed probe, beacon or missing SSID must not activate that wildcard
+  candidate rule. Ordinary devices may also send matching wildcard probes.
+- If still missed, export diagnostics and capture the MAC/protocol/channel
+  reported by the other detector. Reception and classification are separate.

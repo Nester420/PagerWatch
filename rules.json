@@ -1,0 +1,1075 @@
+{
+  "version": "2026-10-24-wardrive-probes-1",
+  "rules": [
+    {
+      "id": "axon-bwc",
+      "label": "Axon body-camera signature",
+      "category": "BODY CAMERA",
+      "score": 90,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "payload",
+          "op": "contains_hex",
+          "value": "425743444556494345"
+        }
+      ],
+      "evidence": "BWCDEVICE tag in BLE manufacturer/service data; camera activity is unknown.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "axon-service-fc81",
+      "label": "Axon / TASER service",
+      "category": "BODY CAMERA",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "fc81"
+        }
+      ],
+      "evidence": "Assigned Axon/TASER service UUID 0xFC81; product model is not established.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "axon-service-fe6b",
+      "label": "Axon / TASER service",
+      "category": "BODY CAMERA",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "fe6b"
+        }
+      ],
+      "evidence": "Assigned Axon/TASER service UUID 0xFE6B; product model is not established.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "axon-service-fe6c",
+      "label": "Axon / TASER service",
+      "category": "BODY CAMERA",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "fe6c"
+        }
+      ],
+      "evidence": "Assigned Axon/TASER service UUID 0xFE6C; product model is not established.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "axon-company",
+      "label": "Axon / TASER vendor",
+      "category": "BODY CAMERA",
+      "score": 60,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x034d"
+        }
+      ],
+      "evidence": "Bluetooth company ID 0x034D (TASER); vendor evidence only.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "axon-pairing",
+      "label": "Axon pairing-network signature",
+      "category": "BODY CAMERA",
+      "score": 85,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "frame",
+          "op": "regex",
+          "value": "^(beacon|probe_response|scan_result)$"
+        },
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^AB[234]-.+"
+        }
+      ],
+      "evidence": "Access-point name follows an Axon Body 2/3/4 pairing pattern.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "axon-hotspot",
+      "label": "Axon-named hotspot",
+      "category": "BODY CAMERA",
+      "score": 65,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^AXON-.+"
+        }
+      ],
+      "evidence": "AXON- network name; names can be changed or spoofed.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "axon-wifi-vendor",
+      "label": "Axon Enterprise radio",
+      "category": "BODY CAMERA",
+      "score": 70,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "00:25:DF:"
+        }
+      ],
+      "evidence": "IEEE prefix 00:25:DF belongs to Axon Enterprise; model/activity unknown.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "axon-ble-vendor",
+      "label": "Axon Enterprise radio",
+      "category": "BODY CAMERA",
+      "score": 60,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "address_type",
+          "op": "equal",
+          "value": "public"
+        },
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "00:25:DF:"
+        }
+      ],
+      "evidence": "Public BLE address on Axon Enterprise prefix; not applied to random/unknown address types.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "utility-bodyworn",
+      "label": "Utility BodyWorn signature",
+      "category": "BODY CAMERA",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "BodyWorn Remote"
+        }
+      ],
+      "evidence": "Advertised BodyWorn Remote device name.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-ssid",
+      "label": "Flock network signature",
+      "category": "FLOCK / ALPR",
+      "score": 88,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^Flock-[0-9a-f]{4,}$"
+        }
+      ],
+      "evidence": "Flock- network name followed by a hexadecimal identifier; spoofing remains possible.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-wifi-vendor",
+      "label": "Flock Safety radio",
+      "category": "FLOCK / ALPR",
+      "score": 75,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "B4:1E:52:"
+        }
+      ],
+      "evidence": "IEEE-registered Flock Safety address prefix; exact product unknown.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-ble-vendor",
+      "label": "Flock Safety radio",
+      "category": "FLOCK / ALPR",
+      "score": 75,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "address_type",
+          "op": "equal",
+          "value": "public"
+        },
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "B4:1E:52:"
+        }
+      ],
+      "evidence": "Public BLE address on the IEEE-registered Flock Safety prefix; exact product unknown. Random and unknown address types are excluded.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-battery",
+      "label": "Flock battery-name signature",
+      "category": "FLOCK / ALPR",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^FS Ext Battery(?:$|\\s)"
+        }
+      ],
+      "evidence": "Advertised FS Ext Battery name; a battery/accessory is not proof of a recording camera.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-penguin",
+      "label": "Possible Flock accessory",
+      "category": "FLOCK / ALPR",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^Penguin-\\d+$"
+        }
+      ],
+      "evidence": "Flock-associated name pattern; name alone is not exclusive.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-penguin-company",
+      "label": "Flock accessory signature",
+      "category": "FLOCK / ALPR",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^Penguin-\\d+$"
+        },
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x09c8"
+        }
+      ],
+      "evidence": "Flock-associated name together with XUNTONG company ID 0x09C8.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-fshex",
+      "label": "Possible Flock accessory",
+      "category": "FLOCK / ALPR",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^FS-[0-9a-f]{4,}$"
+        }
+      ],
+      "evidence": "Flock-associated name pattern; name alone is not exclusive.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-fshex-company",
+      "label": "Flock accessory signature",
+      "category": "FLOCK / ALPR",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^FS-[0-9a-f]{4,}$"
+        },
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x09c8"
+        }
+      ],
+      "evidence": "Flock-associated name together with XUNTONG company ID 0x09C8.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "flock-service-0",
+      "label": "Flock accessory service",
+      "category": "FLOCK / ALPR",
+      "score": 85,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "e8ccbb38-9532-46a8-9fe5-1814df172e6f"
+        }
+      ],
+      "evidence": "Community-documented Flock accessory service UUID: e8ccbb38-9532-46a8-9fe5-1814df172e6f",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "flock-service-1",
+      "label": "Flock accessory service",
+      "category": "FLOCK / ALPR",
+      "score": 85,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "20c944c1-add2-42d7-a638-967ee9a26ff6"
+        }
+      ],
+      "evidence": "Community-documented Flock accessory service UUID: 20c944c1-add2-42d7-a638-967ee9a26ff6",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "xuntong-shared",
+      "label": "Shared Bluetooth module",
+      "category": "SHARED CHIP",
+      "score": 20,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x09c8"
+        }
+      ],
+      "evidence": "XUNTONG silicon is shared across products. This alone does not identify Flock.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "module-probe-24b2b9",
+      "label": "Shared module probe hint",
+      "category": "SHARED CHIP",
+      "score": 25,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "frame",
+          "op": "equal",
+          "value": "probe_request"
+        },
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "24:B2:B9:"
+        }
+      ],
+      "evidence": "Liteon probe prefix reported near Flock sites; ordinary laptops also match. Not a camera identification.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "module-probe-f46add",
+      "label": "Shared module probe hint",
+      "category": "SHARED CHIP",
+      "score": 25,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "frame",
+          "op": "equal",
+          "value": "probe_request"
+        },
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "F4:6A:DD:"
+        }
+      ],
+      "evidence": "Liteon probe prefix reported near Flock sites; ordinary laptops also match. Not a camera identification.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "module-probe-d8f3bc",
+      "label": "Shared module probe hint",
+      "category": "SHARED CHIP",
+      "score": 25,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "frame",
+          "op": "equal",
+          "value": "probe_request"
+        },
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "D8:F3:BC:"
+        }
+      ],
+      "evidence": "Liteon probe prefix reported near Flock sites; ordinary laptops also match. Not a camera identification.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "module-probe-c03532",
+      "label": "Shared module probe hint",
+      "category": "SHARED CHIP",
+      "score": 25,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "frame",
+          "op": "equal",
+          "value": "probe_request"
+        },
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "C0:35:32:"
+        }
+      ],
+      "evidence": "Liteon probe prefix reported near Flock sites; ordinary laptops also match. Not a camera identification.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "raven-3100",
+      "label": "Possible Flock Raven service",
+      "category": "AUDIO SENSOR",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3100"
+        }
+      ],
+      "evidence": "Community-observed Raven service UUID 0x3100; custom UUIDs are not globally exclusive.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "raven-3200",
+      "label": "Possible Flock Raven service",
+      "category": "AUDIO SENSOR",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3200"
+        }
+      ],
+      "evidence": "Community-observed Raven service UUID 0x3200; custom UUIDs are not globally exclusive.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "raven-3300",
+      "label": "Possible Flock Raven service",
+      "category": "AUDIO SENSOR",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3300"
+        }
+      ],
+      "evidence": "Community-observed Raven service UUID 0x3300; custom UUIDs are not globally exclusive.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "raven-3400",
+      "label": "Possible Flock Raven service",
+      "category": "AUDIO SENSOR",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3400"
+        }
+      ],
+      "evidence": "Community-observed Raven service UUID 0x3400; custom UUIDs are not globally exclusive.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "raven-3500",
+      "label": "Possible Flock Raven service",
+      "category": "AUDIO SENSOR",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3500"
+        }
+      ],
+      "evidence": "Community-observed Raven service UUID 0x3500; custom UUIDs are not globally exclusive.",
+      "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
+    },
+    {
+      "id": "tracker-samsung",
+      "label": "Samsung tracker service",
+      "category": "TRACKER",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "fd5a"
+        }
+      ],
+      "evidence": "Tracker-associated service UUID 0xFD5A; does not establish unwanted tracking.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "tracker-tile",
+      "label": "Tile tracker service",
+      "category": "TRACKER",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "feed"
+        }
+      ],
+      "evidence": "Tracker-associated service UUID 0xFEED; does not establish unwanted tracking.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "tracker-tile-alt",
+      "label": "Tile tracker service",
+      "category": "TRACKER",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "feec"
+        }
+      ],
+      "evidence": "Tracker-associated service UUID 0xFEEC; does not establish unwanted tracking.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "apple-findmy",
+      "label": "Apple Find My broadcast",
+      "category": "TRACKER",
+      "score": 70,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "company_payload:0x004c",
+          "op": "hex_prefix",
+          "value": "1219"
+        }
+      ],
+      "evidence": "Apple Find My-style manufacturer frame 0x12/0x19; may be an accessory other than AirTag.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "google-findhub",
+      "label": "Google Find Hub broadcast",
+      "category": "TRACKER",
+      "score": 70,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "service_payload:feaa",
+          "op": "hex_prefix",
+          "value": "41"
+        }
+      ],
+      "evidence": "Find Hub service data frame 0x41; not proof of a particular tracker model.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "glasses-0x0d53",
+      "label": "Luxottica / smart-glasses vendor",
+      "category": "SMART GLASSES",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x0d53"
+        }
+      ],
+      "evidence": "Bluetooth manufacturer ID 0x0d53; camera presence or recording state is unknown.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "glasses-0x03c2",
+      "label": "Snap / smart-glasses vendor",
+      "category": "SMART GLASSES",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x03c2"
+        }
+      ],
+      "evidence": "Bluetooth manufacturer ID 0x03c2; camera presence or recording state is unknown.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "glasses-0x060c",
+      "label": "Vuzix / smart-glasses vendor",
+      "category": "SMART GLASSES",
+      "score": 65,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x060c"
+        }
+      ],
+      "evidence": "Bluetooth manufacturer ID 0x060c; camera presence or recording state is unknown.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "motorola-solutions",
+      "label": "Motorola Solutions vendor",
+      "category": "RADIO / VENDOR",
+      "score": 35,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x04ec"
+        }
+      ],
+      "evidence": "Shared Motorola Solutions company identifier; common in commercial radios, not evidence of police.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "drone-rid",
+      "label": "Remote ID-style broadcast",
+      "category": "DRONE",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "service_payload:fffa",
+          "op": "hex_prefix",
+          "value": "0d"
+        }
+      ],
+      "evidence": "ASTM Remote ID application code 0x0D; this prototype does not decode drone or operator coordinates.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "arlo-network",
+      "label": "Arlo base-station signature",
+      "category": "CAMERA SYSTEM",
+      "score": 80,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^(ARLO_VMB_|NTGR_VMB_).+"
+        }
+      ],
+      "evidence": "Camera base-station SSID pattern; not a hidden-camera determination.",
+      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+    },
+    {
+      "id": "flipper-service-3080",
+      "label": "Flipper Zero service signature",
+      "category": "SECURITY TOOL",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3080"
+        }
+      ],
+      "evidence": "Advertised Flipper serial-profile UUID 0x3080. Identifies an advertised signature, not an attack or a person; can be spoofed.",
+      "source": "https://github.com/flipperdevices/flipperzero-firmware/blob/3fb1d51727733d2007abc5ec636a89328857803e/targets/f7/ble_glue/profiles/serial_profile.c"
+    },
+    {
+      "id": "flipper-service-3081",
+      "label": "Flipper Zero service signature",
+      "category": "SECURITY TOOL",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3081"
+        }
+      ],
+      "evidence": "Advertised Flipper serial-profile UUID 0x3081. Identifies an advertised signature, not an attack or a person; can be spoofed.",
+      "source": "https://github.com/flipperdevices/flipperzero-firmware/blob/3fb1d51727733d2007abc5ec636a89328857803e/targets/f7/ble_glue/profiles/serial_profile.c"
+    },
+    {
+      "id": "flipper-service-3082",
+      "label": "Flipper Zero service signature",
+      "category": "SECURITY TOOL",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3082"
+        }
+      ],
+      "evidence": "Advertised Flipper serial-profile UUID 0x3082. Identifies an advertised signature, not an attack or a person; can be spoofed.",
+      "source": "https://github.com/flipperdevices/flipperzero-firmware/blob/3fb1d51727733d2007abc5ec636a89328857803e/targets/f7/ble_glue/profiles/serial_profile.c"
+    },
+    {
+      "id": "flipper-service-3083",
+      "label": "Flipper Zero service signature",
+      "category": "SECURITY TOOL",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "3083"
+        }
+      ],
+      "evidence": "Advertised Flipper serial-profile UUID 0x3083. Identifies an advertised signature, not an attack or a person; can be spoofed.",
+      "source": "https://github.com/flipperdevices/flipperzero-firmware/blob/3fb1d51727733d2007abc5ec636a89328857803e/targets/f7/ble_glue/profiles/serial_profile.c"
+    },
+    {
+      "id": "flipper-name",
+      "label": "Possible Flipper Zero (name)",
+      "category": "SECURITY TOOL",
+      "score": 55,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^Flipper(?:[ _-][A-Za-z0-9_-]{1,24})?$"
+        }
+      ],
+      "evidence": "BLE name matches the stock Flipper naming pattern. Name alone is spoofable and does not establish hardware or activity.",
+      "source": "https://github.com/flipperdevices/flipperzero-firmware/blob/3fb1d51727733d2007abc5ec636a89328857803e/targets/f7/furi_hal/furi_hal_version.c"
+    },
+    {
+      "id": "flipper-company",
+      "label": "Flipper Devices manufacturer hint",
+      "category": "SECURITY TOOL",
+      "score": 50,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "company",
+          "op": "contains",
+          "value": "0x0E29"
+        }
+      ],
+      "evidence": "ManufacturerData company ID 0x0E29 is registered to Flipper Devices. It does not establish a specific product or an attack.",
+      "source": "https://www.bluetooth.com/specifications/assigned-numbers/"
+    },
+    {
+      "id": "flipper-public-prefix",
+      "label": "Flipper Devices address hint",
+      "category": "SECURITY TOOL",
+      "score": 60,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "0C:FA:22:"
+        },
+        {
+          "field": "address_type",
+          "op": "equal",
+          "value": "public"
+        }
+      ],
+      "evidence": "Public BLE address uses the Flipper-associated prefix from find_hackers. Address alone does not establish model or activity.",
+      "source": "https://github.com/hak5/wifipineapplepager-payloads/blob/5ed2f6c307880c9201c0f7912da6076caa5cc1d7/library/user/reconnaissance/find_hackers/payload.sh"
+    },
+    {
+      "id": "flock-pigvision-name",
+      "label": "Pigvision name hint",
+      "category": "FLOCK / ALPR",
+      "score": 50,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^Pigvision(?:[-_ ][A-Za-z0-9_-]+)?$"
+        }
+      ],
+      "evidence": "Community payload associates Pigvision with Flock infrastructure. Name is spoofable and product identity is not confirmed.",
+      "source": "https://github.com/hak5/wifipineapplepager-payloads/blob/5ed2f6c307880c9201c0f7912da6076caa5cc1d7/library/user/reconnaissance/Flock_Detect/payload.sh"
+    },
+    {
+      "id": "flock-penguin-broad",
+      "label": "Penguin accessory name hint",
+      "category": "FLOCK / ALPR",
+      "score": 55,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^Penguin-[A-Za-z0-9_-]{1,24}$"
+        }
+      ],
+      "evidence": "Broader Penguin accessory name pattern from Flock_Detect. Name alone is not exclusive to Flock.",
+      "source": "https://github.com/hak5/wifipineapplepager-payloads/blob/5ed2f6c307880c9201c0f7912da6076caa5cc1d7/library/user/reconnaissance/Flock_Detect/payload.sh"
+    },
+    {
+      "id": "pineapple-default-name",
+      "label": "Pineapple-style network name",
+      "category": "SECURITY TOOL",
+      "score": 40,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^(?:WiFi[ _-]?)?Pineapple(?:[ _-].*)?$"
+        },
+        {
+          "field": "frame",
+          "op": "regex",
+          "value": "^(beacon|probe_response|scan_result)$"
+        }
+      ],
+      "evidence": "SSID resembles a Pineapple default/product name. Any AP can use it; this is not attack evidence.",
+      "source": "https://github.com/hak5/wifipineapplepager-payloads/blob/5ed2f6c307880c9201c0f7912da6076caa5cc1d7/library/user/reconnaissance/find_hackers/payload.sh"
+    },
+    {
+      "id": "pager-default-name",
+      "label": "Pager-style network name",
+      "category": "SECURITY TOOL",
+      "score": 40,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^pager(?:[_ -](?:open|[0-9a-f]{4,}))?$"
+        },
+        {
+          "field": "frame",
+          "op": "regex",
+          "value": "^(beacon|probe_response|scan_result)$"
+        }
+      ],
+      "evidence": "SSID resembles a Pager management/open-network name. It may be this Pager or an unrelated AP.",
+      "source": "https://github.com/hak5/wifipineapplepager-payloads/blob/5ed2f6c307880c9201c0f7912da6076caa5cc1d7/library/user/reconnaissance/find_hackers/payload.sh"
+    },
+    {
+      "id": "rc400l-network-name",
+      "label": "RC400L hotspot name hint",
+      "category": "HOTSPOT",
+      "score": 30,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "name",
+          "op": "regex",
+          "value": "^RC400L(?:[ _-].*)?$"
+        },
+        {
+          "field": "frame",
+          "op": "regex",
+          "value": "^(beacon|probe_response|scan_result)$"
+        }
+      ],
+      "evidence": "RC400L is also an ordinary hotspot. An SSID cannot establish that Rayhunter software is installed or running.",
+      "source": "https://github.com/hak5/wifipineapplepager-payloads/blob/5ed2f6c307880c9201c0f7912da6076caa5cc1d7/library/user/reconnaissance/find_hackers/payload.sh"
+    },
+    {
+      "id": "flipper-st-prefix-hint",
+      "label": "Shared ST prefix / Flipper candidate",
+      "category": "CHIPSET HINT",
+      "score": 20,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "address",
+          "op": "prefix",
+          "value": "80:E1:26:"
+        },
+        {
+          "field": "address_type",
+          "op": "equal",
+          "value": "public"
+        }
+      ],
+      "evidence": "Shared ST-derived prefix checked by flipper_detector. Other ST devices use this range; prefix alone is insufficient to identify a Flipper. Requires public address type.",
+      "source": "https://github.com/hak5/wifipineapplepager-payloads/blob/5ed2f6c307880c9201c0f7912da6076caa5cc1d7/library/user/reconnaissance/flipper_detector/payload.sh"
+    },
+    {
+      "id": "flock-wildcard-probe-candidate",
+      "label": "Possible Flock wildcard probe",
+      "category": "FLOCK / ALPR",
+      "score": 75,
+      "protocols": [
+        "wifi"
+      ],
+      "conditions": [
+        {
+          "field": "frame",
+          "op": "equal",
+          "value": "probe_request"
+        },
+        {
+          "field": "probe_ssid_status",
+          "op": "equal",
+          "value": "wildcard"
+        },
+        {
+          "field": "address",
+          "op": "regex",
+          "value": "^(?:B4:1E:52|70:C9:4E|3C:91:80|D8:F3:BC|80:30:49|B8:35:32|14:5A:FC|74:4C:A1|08:3A:88|9C:2F:9D|C0:35:32|94:08:53|E4:AA:EA|F4:6A:DD|F8:A2:D6|24:B2:B9|00:F4:8D|D0:39:57|E8:D0:FC|E0:4F:43|B8:1E:A4|70:08:94|58:8E:81|EC:1B:BD|3C:71:BF|58:00:E3|90:35:EA|5C:93:A2|64:6E:69|48:27:EA|A4:CF:12|82:6B:F2):"
+        }
+      ],
+      "evidence": "Transmitter prefix and a complete wildcard probe match Wardrive Go's 32-prefix candidate heuristic. These include shared chipsets and a locally administered prefix; ordinary devices can also match. This is a possible Flock lead, not a confirmed camera or manufacturer identification.",
+      "source": "https://github.com/RocketGod-git/wardrive-go/blob/b30f16fb3b31807b2526678db2de12c377e09ff6/app/src/main/java/com/rocketgod/warble/classify/NotableDevices.kt"
+    }
+  ]
+}

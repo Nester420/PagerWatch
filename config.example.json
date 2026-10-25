@@ -1,0 +1,32 @@
+{
+  "wifi_enabled": true,
+  "wifi_interface": "adaptive",
+  "wifi_scan_mode": "dual",
+  "ble_enabled": true,
+  "ble_controller": "",
+  "hop_frequencies": [
+    2412,
+    2437,
+    2462
+  ],
+  "hop_seconds": 0.5,
+  "gps_enabled": false,
+  "gpsd_host": "127.0.0.1",
+  "gpsd_port": 2947,
+  "alert_threshold": 75,
+  "vibrate": true,
+  "max_devices": 2000,
+  "max_log_mb": 20,
+  "log_directory": "/mmc/root/loot/PagerWatch",
+  "exclude_addresses": [],
+  "ble_info_lookup": true,
+  "ble_backend": "auto",
+  "ble_hci_interface": "auto",
+  "web_enabled": true,
+  "web_bind": "172.16.52.1",
+  "web_port": 8443,
+  "scan_profile": "survey",
+  "privacy_mode": false,
+  "device_notes": {},
+  "watch_rules": []
+}

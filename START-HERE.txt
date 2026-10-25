@@ -1,0 +1,40 @@
+PAGERWATCH 1.0.8 — by Nester
+
+INSTALL
+Extract PagerWatch-1.0.8-release.zip. Copy the entire PagerWatch folder to:
+/root/payloads/user/reconnaissance/
+
+Ubuntu: connect to the Pager, open a terminal beside the extracted folder:
+scp -O -r PagerWatch root@172.16.52.1:/root/payloads/user/reconnaissance/
+Enter your Pager root password. Use its actual IP if different.
+
+Windows: use WinSCP, SCP, port 22, root and your Pager password.
+Drag the entire PagerWatch folder to the directory above.
+
+Launch Payloads > User > Reconnaissance > PagerWatch. Press A.
+Startup attempts to install missing supported dependencies when the Pager
+has internet access. Compatible USB drivers are required.
+
+DASHBOARD
+Connect to Pager Wi-Fi. Open the HTTPS address on WEB and enter its code.
+Default: https://172.16.52.1:8443
+
+GPS
+Phone GPS > Share this device's GPS. Allow location and wait for a fresh fix.
+Keep the phone awake, connected and the page open.
+
+PAGER BUTTONS
+Left/Right: tabs. Up/Down: select/scroll. A: open/apply. B: back.
+FIELD: run summary, GPS, known gear and saved sessions.
+Device details > A: actions and device research.
+
+UPDATE
+Finish the payload, replace matching release files, keep config.json and
+.state. Relaunch and refresh the dashboard.
+
+RESULTS
+Use Controls & exports in the dashboard or retrieve:
+/mmc/root/loot/PagerWatch/
+
+Guide: README.md | Changes: RELEASE-NOTES.md | Field checks: FIELD-TEST.txt
+Credits and licenses: NOTICE.md

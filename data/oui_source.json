@@ -1,0 +1,13 @@
+{
+  "source": "https://github.com/RocketGod-git/wardrive-go",
+  "revision": "b30f16fb3b31807b2526678db2de12c377e09ff6",
+  "file": "app/src/main/assets/oui_manuf.txt",
+  "source_url": "https://raw.githubusercontent.com/RocketGod-git/wardrive-go/b30f16fb3b31807b2526678db2de12c377e09ff6/app/src/main/assets/oui_manuf.txt",
+  "source_sha256": "06707cd7f242904bdf77a97b8495f97cb78da366c9e6215754605f24deb393a9",
+  "valid_rows": 89652,
+  "distinct_prefixes": 40111,
+  "ambiguous_prefixes": 439,
+  "index_format": "PWOUI01",
+  "license": "GPL-3.0 (upstream repository)",
+  "purpose": "Manufacturer context only. No automatic camera alerts from vendor names."
+}

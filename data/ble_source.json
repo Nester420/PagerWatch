@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/RocketGod-git/wardrive-go",
+  "revision": "b30f16fb3b31807b2526678db2de12c377e09ff6",
+  "source_path": "app/src/main/assets/ble_vendor_data.json",
+  "sha256": "203cd581b7aec38db494a8503f96a8c7b1ae6e43e1963f5e73d356741a6034cc",
+  "counts": {
+    "full": 3997,
+    "makerCat": 185,
+    "serviceCat": 93,
+    "serviceMaker": 650
+  },
+  "use": "Registrant labels and category hints only; no new detection rules"
+}
