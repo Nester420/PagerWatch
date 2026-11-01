@@ -68,7 +68,7 @@ def save_config(path, config):
 
 def doctor(config):
     import shutil
-    print("PagerWatch 1.0.8 readiness (no radio settings changed)")
+    print("PagerWatch 1.0.11 readiness (no radio settings changed)")
     print("Python:", sys.version.split()[0])
     for tool in ("iw", "tcpdump", "bluetoothctl", "hcitool", "hcidump"):
         print(tool + ":", shutil.which(tool) or "MISSING")
@@ -152,6 +152,11 @@ def main():
     web = None
     web_export = None
     last_publish = 0
+    publish_job = None
+    button_reader = None
+    loop_previous = None
+    loop_max_ms = 0
+    loop_slow_turns = 0
     last_draw = 0
     tracking_request = None
     from .runtime import RadioChange,Heartbeat
@@ -221,6 +226,8 @@ def main():
             if pager.init() != 0:
                 raise RuntimeError("Display initialization failed")
             pager.set_rotation(270)
+            from .responsive import ButtonReader
+            button_reader=ButtonReader(pager)
             screen = Screen(pager, session, workers, lambda: save_config(args.config, config))
             session.alert_callback = screen.notify
             screen.start_splash(ROOT / "assets/startup.png")
@@ -246,9 +253,24 @@ def main():
         last_report = 0
         heartbeat.start()
         while not stopped:
+            loop_started=time.monotonic()
+            if loop_previous is not None:
+                gap=(loop_started-loop_previous)*1000
+                loop_max_ms=max(loop_max_ms,gap)
+                if gap>250:loop_slow_turns+=1
+            loop_previous=loop_started
             heartbeat.beat()
-            ingest_until=time.monotonic()+.05
-            for _ in range(100):
+            pressed=0
+            if screen:
+                events=button_reader.read()
+                for event in events:
+                    pressed |= event
+                    screen.input(event)
+                    if screen.exit_requested:break
+                if not events:screen.input(0)
+                if screen.exit_requested:break
+            ingest_until=time.monotonic()+.008
+            for _ in range(32):
                 if time.monotonic()>=ingest_until:break
                 try:
                     obs = inbox.get_nowait()
@@ -344,12 +366,15 @@ def main():
                 else:message=result
                 if request and web:web.result(request,success,message)
                 if screen:screen.notice(message)
-            if web and web.wants_snapshot() and time.monotonic()-last_publish >= 4:
-                web.publish(session, workers, dropped)
-                last_publish = time.monotonic()
+            if web and publish_job is None and web.wants_snapshot() and time.monotonic()-last_publish >= 4:
+                publish_job=web.publish_steps(session,workers,dropped)
+            if publish_job is not None:
+                snapshot_until=time.monotonic()+.004
+                while time.monotonic()<snapshot_until:
+                    try:next(publish_job)
+                    except StopIteration:
+                        publish_job=None;last_publish=time.monotonic();break
             if screen:
-                _, pressed, _ = pager.poll_input()
-                screen.input(pressed)
                 if getattr(screen,'adapter_refresh_requested',False):
                     screen.adapter_refresh_requested=False
                     wifi=workers.get('Wi-Fi')
@@ -410,12 +435,14 @@ def main():
             if heartbeat.thread is None:heartbeat.start()
             reliability.tick(workers,{"Wi-Fi":WifiWorker,"BLE":BleWorker},config,sink,session.gps_status,inbox.qsize(),dropped)
             session.reliability=reliability.snapshot()
-            session.checkpoint()
+            session.reliability['performance'].update(ui_loop_max_gap_ms=round(loop_max_ms,1),ui_slow_turns=loop_slow_turns)
+            session.checkpoint_step()
             session.storage=session.storage_health.snapshot(session)
             if args.seconds and time.monotonic() - began >= args.seconds:
                 break
-            time.sleep(0.2)
+            time.sleep(max(0,.04-(time.monotonic()-loop_started)))
     finally:
+        if screen:screen.feedback.close()
         reliability.close()
         heartbeat.close()
         radio_change.close()

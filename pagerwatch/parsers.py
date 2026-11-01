@@ -152,6 +152,7 @@ class BluezParser:
     def __init__(self, max_devices=2048, ttl=120):
         self.devices = {}
         self.pending = None
+        self.metadata_generation = 0
         self.max_devices = max_devices
         self.ttl = ttl
 
@@ -179,7 +180,7 @@ class BluezParser:
         if mac not in self.devices or now - self.devices[mac]["updated"] > self.ttl:
             if len(self.devices) >= self.max_devices:
                 self.devices.pop(min(self.devices, key=lambda k: self.devices[k]["updated"]))
-            self.devices[mac] = {"obs": Observation("ble", mac), "updated": now,
+            self.devices[mac] = {"obs": Observation("ble", mac, metadata_source="bluez_properties"), "updated": now,
                                  "keys": {}, "changed": now, "emitted": -1, "radio": 0,
                                  "evidence_times": {}}
         entry = self.devices[mac]
@@ -208,6 +209,7 @@ class BluezParser:
             obs.uuids = sorted(set(obs.uuids + [u.lower() for u in UUID.findall(value)]))[:64]
             for value_uuid in UUID.findall(value):
                 entry["evidence_times"][("uuid", value_uuid.lower())] = now
+            if UUID.findall(value):self.metadata_generation += 1
             obs.timestamp = entry["radio"] = now
         elif key == "ManufacturerData.Key":
             number = re.search(r"0x([0-9a-f]+)", value, re.I)
@@ -222,6 +224,7 @@ class BluezParser:
             data_key = entry["keys"].get(field)
             if data_key:
                 table = obs.manufacturer if field == "mfg" else obs.service_data
+                self.metadata_generation += 1
                 table[data_key] = ""
                 entry["evidence_times"][(field, data_key)] = now
                 self.pending = (mac, field, data_key)
@@ -252,6 +255,8 @@ class BluezParser:
             out[-1].uuids = list(obs.uuids)
             out[-1].manufacturer = dict(obs.manufacturer)
             out[-1].service_data = dict(obs.service_data)
+            prefixes={'uuid':'uuid','mfg':'company','svc':'service'}
+            out[-1].metadata_seen = {prefixes[kind]+':'+str(key):stamp for (kind,key),stamp in entry['evidence_times'].items()}
         return out
 
 

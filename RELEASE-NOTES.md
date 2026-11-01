@@ -1,14 +1,19 @@
-# PagerWatch 1.0.8 — Wardrive Go probe detection
+# PagerWatch 1.0.11 — Pager responsiveness
 
-- Add the complete 32-prefix wildcard-probe heuristic from RocketGod's Wardrive Go classifier, pinned to revision b30f16fb3b31807b2526678db2de12c377e09ff6. This adds 31 prefixes alongside the existing Flock Safety prefix in that detection path.
-- Show shared-prefix matches as **Possible Flock wildcard probe**. The default alert threshold (75) includes this candidate; it is not proof of a camera or a Flock-owned MAC registration.
-- Distinguish a real zero-length probe SSID from directed, missing, duplicate or truncated SSID fields. Requested network names are not treated as device names.
-- Include probe type in the classification cache so a later wildcard probe is evaluated even if the MAC/name are unchanged.
-- Strip an included frame checksum according to radiotap flags; reject frames marked BADFCS.
-- Keep 1.0.7 MAC normalization, public Bluetooth matching and passive management-frame coverage. USB handling and other recon features are unchanged.
+- Check physical input before scan processing. Use queued press/release events when pagerctl supports them, preserving short taps and repeated direction presses; retain the legacy input fallback.
+- Run alert vibration in one bounded background worker. Burst feedback is rate limited to one pulse per two seconds; individual matching addresses still receive their recorded alerts.
+- Prepare recovery inventories in small pieces and write/sync checkpoints in the background. Interrupted-session review replays journal changes received during preparation without overwriting newer inventory evidence.
+- Build dashboard snapshots in small pieces and publish each completed snapshot atomically.
+- Limit scan processing to short work slices and target a 40 ms control-loop interval. This is a scheduling target, not a hardware latency guarantee.
+- Combine redundant Bluetooth bursts for up to 500 ms. Changed advertised evidence and RSSI changes of at least 4 dB pass immediately; periodic updates continue. Raw receive counters still count incoming advertising reports.
+- Avoid repeatedly rebuilding identical diagnostic samples. Add longest control-loop gap and slow-turn counts to dashboard reliability details and diagnostics.
 
-## Update from Windows
+## Install / update from Windows
 
-Finish PagerWatch. Extract `PagerWatch-1.0.8-release.zip`. In WinSCP, copy the complete `PagerWatch` folder into `/root/payloads/user/reconnaissance/`, replacing matching release files. Keep `config.json` and `.state`. Relaunch and refresh the dashboard.
+Finish PagerWatch. Extract `PagerWatch-1.0.11-release.zip`. In WinSCP use SCP and copy the complete `PagerWatch` folder into `/root/payloads/user/reconnaissance/`, replacing release files. Preserve `config.json` and `.state`. Relaunch and refresh the dashboard.
 
-Host tests validate synthetic packets and regression behavior. The local camera's exact MAC/protocol has not been supplied; field detection is not yet verified. Shared-chipset candidates can also match ordinary devices. Compare Devices as well as Alerts; thresholds and filters may suppress an alert.
+## Test this build on the Pager
+
+Compare the same location, adapter and display tab against 1.0.10. Try short direction-button taps and opening/backing out of device actions with the phone dashboard both connected and disconnected. Run for at least 20 minutes so several checkpoints occur. Check Bluetooth alerts, USB fallback, GPS-tagged logging and saved-session exports. If lag returns, build diagnostics immediately and record the tab, elapsed runtime, active adapter and whether the dashboard was connected.
+
+Host tests simulate button queues, slow storage, burst reception and interrupted checkpoint recovery. Actual display latency, radio load and storage behavior require Pager testing. Features, saved settings and existing logs are retained. No handshake capture or deauthentication is included.

@@ -1,0 +1,12 @@
+check,firmware,adapter,target_protocol,target_mac,comparison_tool,started_utc,ended_utc,result,diagnostic_zip,notes
+Tile,,,,,,,,NOT TESTED,,
+AirTag,,,,,,,,NOT TESTED,,
+Flock,,,,,,,,NOT TESTED,,
+Once-per-address alerts,,,,,,,,NOT TESTED,,
+Bluetooth 30 minutes,,,,,,,,NOT TESTED,,
+USB five unplug-replug cycles,,,,,,,,NOT TESTED,,
+60-minute drive,,,,,,,,NOT TESTED,,
+Privacy during detection check,,,,,,,,NOT TESTED,,
+Pager controls 20 minutes,,,,,,,,NOT TESTED,,
+Phone dashboard connected vs closed,,,,,,,,NOT TESTED,,
+Checkpoint responsiveness and recovery,,,,,,,,NOT TESTED,,

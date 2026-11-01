@@ -46,6 +46,7 @@ def advertisement(address, address_type, data, rssi, now):
             part = value[:width]
             service = str(uuid.UUID(bytes=part[::-1])) if width == 16 else '%08x-0000-1000-8000-00805f9b34fb' % int.from_bytes(part,'little')
             obs.service_data[service] = value[width:].hex()
+    obs.advertising_data_hex = data.hex()
     obs.uuids = sorted(set(obs.uuids))
     return obs
 
@@ -163,6 +164,11 @@ class AdvertisementCache:
         while len(self.entries)>self.limit:
             self.entries.popitem(last=False)
         data=old.to_dict()
+        data['rssi'] = obs.rssi  # A name-only event is not a new signal measurement.
+        data['metadata_seen'] = {}
+        for (field, key), stamp in times.items():
+            label = 'uuid:'+uuid128(key) if field == 'uuids' else 'company:'+key if field == 'manufacturer' else 'service:'+uuid128(key) if field == 'service_data' else field
+            data['metadata_seen'][label] = stamp
         return Observation(**data)
 
 

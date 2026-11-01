@@ -25,6 +25,7 @@ Rules are independently implemented except for the credited Wardrive Go wildcard
 | [all-cameras-are-beacons — soyboi1312 and contributors](https://github.com/soyboi1312/all-cameras-are-beacons) | Signature references and false-positive research. Revision `a54bf934591ef3e9cc9187327d0d88b2f887da3b`; [Apache-2.0 license retained](third_party/ACAB-LICENSE). |
 | [RF Sentinel — CIS-C0 and contributors](https://github.com/CIS-C0/RFSentinel) | Flock accessory UUIDs, company IDs, Axon pairing names and tracker references. GPL-3.0; revision `a9a5b615499b49a34abf940ddad3e3c507840972`. No Kotlin implementation is bundled. |
 | [Flipper Zero firmware — Flipper Devices](https://github.com/flipperdevices/flipperzero-firmware/tree/3fb1d51727733d2007abc5ec636a89328857803e) | Advertised service variants, names and address construction. No firmware implementation is included. |
+| [AirGuard — SEEMOO Lab](https://github.com/seemoo-lab/AirGuard/tree/d515c534be7aac370de33e7bae0136a7b995e0cf) and [AirTag research — Adam Catley](https://adamcatley.com/AirTag.html) | Find My record layout, supported short/offline forms and AirTag-compatible status bits. Independent receive-only rule implementation; no GATT, sound playback or tracking-detection code is copied. |
 | [Bluetooth SIG Assigned Numbers](https://www.bluetooth.com/specifications/assigned-numbers/) and [IEEE Registration Authority](https://regauth.standards.ieee.org/) | Company/service identifiers and address-prefix context. |
 
 ## Community payload references

@@ -6,6 +6,7 @@ import math
 import statistics
 import textwrap
 import time
+from .responsive import Feedback
 from .bluetooth_labels import fallback_name, label_lines
 from .scanners import SCAN_MODES, MODE_NAMES, scan_mode
 from .fieldtools import gps_health
@@ -29,6 +30,7 @@ class Screen:
 
     def __init__(self, pager, session, workers, on_save):
         self.p = pager
+        self.feedback=Feedback(pager)
         self.session = session
         self.workers = workers
         self.on_save = on_save
@@ -99,7 +101,7 @@ class Screen:
         self.notice('Signature alert' if self.session.config.get('privacy_mode',False) else device.hits[0].label)
         if self.session.config.get("vibrate", True) and self.session.config.get('scan_profile')!='quiet':
             try:
-                self.p.vibrate(120)
+                self.feedback.pulse()
             except (AttributeError, OSError):
                 pass
 
@@ -156,6 +158,7 @@ class Screen:
     def input(self, pressed):
         p = self.p
         self.tools.pump()
+        if not pressed:return
         if self.splash_active:
             if pressed & p.BTN_A:
                 self.splash_active = False
@@ -191,7 +194,7 @@ class Screen:
                     self.radar_filter = {None:"wifi","wifi":"ble","ble":None}[self.radar_filter]
                     self.radar_selected = None
                 elif self.radar_menu_index == 3:
-                    self.radar_snapshot = copy.deepcopy(self.session.live()) if self.radar_snapshot is None else None
+                    self.radar_snapshot = copy.deepcopy(list(self.session.devices.values())) if self.radar_snapshot is None else None
                 self.radar_menu = False
             return
         if self.hunt_key:
@@ -544,11 +547,15 @@ class Screen:
         return device.obs.protocol+":"+device.obs.address.upper()
 
     def radar_contacts(self, now):
-        devices = self.session.live(now) if self.radar_snapshot is None else list(self.radar_snapshot)
+        devices = list(self.session.devices.values()) if self.radar_snapshot is None else list(self.radar_snapshot)
         if self.hide_known:devices=[d for d in devices if not self.is_known(d)]
         if self.radar_filter:
             devices = [d for d in devices if d.obs.protocol == self.radar_filter]
         return sorted(devices,key=lambda d:(-(d.hits[0].score if d.hits else 0), -(d.obs.rssi if d.obs.rssi is not None else -999),self.contact_key(d)))
+
+    @staticmethod
+    def radar_signal(device):
+        return device.history[-1][1] if device.history else device.obs.rssi
 
     def draw_signal(self, devices, now=None):
         p = self.p
@@ -569,23 +576,26 @@ class Screen:
         for offset,color in ((.30,0x17350A),(.20,0x295611),(.10,0x4D8D13),(0,CYAN)):
             angle=sweep-offset
             p.line(cx,cy,int(cx+math.cos(angle)*radius),int(cy+math.sin(angle)*radius),p.hex_color(color))
-        plotted = [d for d in rows if d.obs.rssi is not None][:24]
+        plotted = rows[:24]
         chosen = next((d for d in rows if self.contact_key(d)==self.radar_selected),None)
-        if chosen and chosen.obs.rssi is not None and chosen not in plotted:
+        if chosen and chosen not in plotted:
             plotted=plotted[:23]+[chosen]
         for d in plotted:
             angle=int.from_bytes(hashlib.sha256(self.contact_key(d).encode()).digest()[:2],"big")/65536*math.tau
-            distance=max(7,min(radius,int((-d.obs.rssi-25)/75*radius)))
+            value=self.radar_signal(d)
+            distance=radius if value is None else max(7,min(radius,int((-value-25)/75*radius)))
             x,y=int(cx+math.cos(angle)*distance),int(cy+math.sin(angle)*distance)
-            p.fill_circle(x,y,3,p.hex_color(CYAN))
+            stale=now-(d.history[-1][0] if d.history else d.obs.timestamp)>10
+            if value is None:p.circle(x,y,3,p.hex_color(CYAN))
+            else:p.fill_circle(x,y,3,p.hex_color(0x48752B if stale else CYAN))
             if self.contact_key(d)==self.radar_selected:
                 p.circle(x,y,6,p.hex_color(CYAN))
         self.text(12,55,(self.radar_filter or "ALL").upper()+" / %d"%len(rows),CYAN)
-        self.text(12,190,"RSSI / no bearing",MUTED)
+        self.text(12,190,"SESSION / dim=old",MUTED)
         if self.radar_snapshot is not None:
             self.text(12,70,"FROZEN VIEW",AMBER)
         if not rows:
-            self.text(178,83,"No live contacts",MUTED,2)
+            self.text(178,83,"No session contacts",MUTED,2)
             self.text(178,115,"Open STATUS for scanner health.",MUTED)
             return
         start=max(0,selected_index-3)
@@ -599,7 +609,7 @@ class Screen:
             samples=[value for stamp,value in d.history if 0<=now-stamp<=15]
             delta=int(statistics.median(samples[-3:])-statistics.median(samples[-6:-3])) if len(samples)>=6 else None
             trend=("%+ddB"%delta) if delta is not None else "--"
-            self.text(175,y+19,"%s %s dBm %s %ds %s"%(d.obs.protocol.upper(),d.obs.rssi if d.obs.rssi is not None else "?",trend,
+            self.text(175,y+19,"%s %s dBm %s %ds %s"%(d.obs.protocol.upper(),self.radar_signal(d) if self.radar_signal(d) is not None else "?",trend,
                       max(0,int(now-d.obs.timestamp)),d.hits[0].tier if d.hits else ""),MUTED)
         self.text(176,193,"%d/%d  A actions"%(selected_index+1,len(rows)),CYAN)
 
@@ -615,7 +625,6 @@ class Screen:
                "Receiver: "+metrics.get("receiver","unknown"),
                "RX: %s socket packets / %s reports / %s names"%(metrics.get("raw_packets",0),metrics.get("decoded_reports",0),metrics.get("name_lines",0)),
                "Live BLE: %d | last received: %s"%(len(ble),age),
-               "Live RSSI: %d | UUIDs: %d"%(sum(d.obs.rssi is not None for d in ble),sum(bool(d.obs.uuids) for d in ble)),
                "Flipper hints: %d session / %d cache-only"%(len(candidates),len(getattr(worker,"cached_candidates",[])))]
         if candidates:
             obs=candidates[-1]["observation"]
@@ -626,6 +635,9 @@ class Screen:
             lines.append("No Flipper signature observed; absence is inconclusive.")
         status=getattr(worker,"status","Bluetooth worker unavailable")
         error=status if status.startswith("ERROR") else metrics.get("last_error") or status
+        health=getattr(getattr(worker,'receive_health',None),'snapshot',lambda:{})()
+        reports=health.get('reports',{}).get('age_seconds');metadata=health.get('metadata',{}).get('age_seconds')
+        lines.insert(1,'Recent reports: %s / metadata: %s'%('never' if reports is None else str(int(reports))+'s', 'never' if metadata is None else str(int(metadata))+'s'))
         lines.append(("Exporting report..." if self.export_busy else error)[:76])
         for index,line in enumerate(lines[:9]):
             self.text(9,54+index*16,line,CYAN if index==0 else FG)

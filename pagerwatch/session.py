@@ -38,6 +38,8 @@ class Device:
     strongest_location: object = None
     evidence_signature: object = None
     base_hits: tuple = ()
+    current_rule_ids: tuple = ()
+    signature_history: dict = field(default_factory=dict)  # rule -> (Hit, last observed time)
     security: dict = field(default_factory=dict)
     security_time: object = None
 
@@ -97,6 +99,27 @@ class Session:
         self.discoveries = (self.path / "discoveries.jsonl").open("xb")
         os.chmod(self.path / "discoveries.jsonl", 0o600)
 
+    def signature_time(self, hit, obs):
+        """Old cached metadata is evidence from its actual receive time."""
+        stamps=[]
+        rule=getattr(self.detector, 'rule_index', {}).get(hit.rule, {})
+        for condition in rule.get('conditions', []):
+            field=condition['field'];value=condition['value'];key=field
+            if field=='uuid':
+                from .detection import uuid128
+                service=uuid128(value)
+                candidates=[obs.metadata_seen[k] for k in ('uuid:'+service,'service:'+service) if k in obs.metadata_seen]
+                if candidates:stamps.append(max(candidates))
+                continue
+            if field=='company':key='company:'+str(int(value,0))
+            elif field.startswith('company_payload:'):key='company:'+str(int(field.split(':',1)[1],0))
+            elif field=='apple_findmy_kind':key='company:76'
+            elif field.startswith('service_payload:'):
+                from .detection import uuid128
+                key='service:'+uuid128(field.split(':',1)[1])
+            if key in obs.metadata_seen:stamps.append(obs.metadata_seen[key])
+        return min(stamps) if stamps else obs.timestamp
+
     def ingest(self, obs, gps=None, gps_reason=None):
         obs.address = normalize_mac(obs.address) or obs.address.upper()
         key = device_key(obs)
@@ -128,6 +151,21 @@ class Session:
             device.last_frequency = obs.frequency
         device.evidence_signature = signature
         device.base_hits = tuple(hits)
+        # Keep prior positive evidence for this exact address. Later packets need
+        # not repeat names/services. Current packets/logs remain unmodified.
+        new_signature = any(hit.rule not in device.signature_history for hit in hits)
+        current_rule_ids=[]
+        for hit in hits:
+            stamp=self.signature_time(hit,obs)
+            if stamp>=obs.timestamp:current_rule_ids.append(hit.rule)
+            previous=device.signature_history.get(hit.rule)
+            if previous is None or stamp>=previous[1]:
+                device.signature_history[hit.rule] = (hit, stamp)
+        device.current_rule_ids=tuple(current_rule_ids)
+        if len(device.signature_history) > 32:
+            oldest = sorted(device.signature_history, key=lambda r: device.signature_history[r][1])
+            for rule in oldest[:-32]:
+                del device.signature_history[rule]
         if gps:
             location = dict(gps, observed_at=obs.timestamp, rssi=obs.rssi,
                             frequency=obs.frequency, name=obs.name or device.ap_name)
@@ -160,7 +198,9 @@ class Session:
         if obs.security and obs.frame in ('beacon','probe_response','scan_result'):
             device.security=dict(obs.security);device.security_time=obs.timestamp
         hits=sorted(hits+watch_hits(self.config,obs),key=lambda hit:(-hit.score,hit.rule))
-        device.hits=hits
+        current_rules = {hit.rule for hit in hits}
+        retained = [hit for rule, (hit, stamp) in device.signature_history.items() if rule not in current_rules]
+        device.hits = sorted(hits + retained, key=lambda hit: (-hit.score, hit.rule))
         if obs.rssi is not None:
             device.history.append((obs.timestamp, obs.rssi))
         self.events += 1
@@ -196,7 +236,7 @@ class Session:
                                     "tier": hits[0].tier, "score": score})
             if self.alert_callback:
                 self.alert_callback(device)
-        if notify or obs.timestamp - self.last_write.get(key, 0) >= 5:
+        if notify or new_signature or obs.timestamp - self.last_write.get(key, 0) >= 5:
             record = {"observation": obs.to_dict(), "matches": [asdict(hit) for hit in hits],
                       "local_note": self.config.get("device_notes",{}).get(key,{}), "security": device.security,
                       "observer_location": gps, "network_name": device.ap_name, "mac_vendor": device.vendor, "bluetooth_context": device.bluetooth, "observed_ssids": device.ssid_names}
@@ -212,6 +252,10 @@ class Session:
                 except OSError as exc:
                     self.log_error = "Log write failed: " + str(exc)
             self.last_write[key] = obs.timestamp
+
+    def recent(self, now=None, seconds=300):
+        now = time.time() if now is None else now
+        return [d for d in self.devices.values() if 0 <= now - d.obs.timestamp < seconds]
 
     def live(self, now=None):
         now = time.time() if now is None else now
@@ -252,7 +296,7 @@ class Session:
         self.ended_mono=time.monotonic()
         self.stream.close()
         self.discoveries.close()
-        summary = {"version": "1.0.8", "rules_version": self.detector.version,
+        summary = {"version": "1.0.11", "rules_version": self.detector.version,
                    "started": self.started, "ended": time.time(), "observations_processed": self.events,
                    "addresses_retained": len(self.devices), "evictions": self.evicted,
                    "log_error": self.log_error, "excluded": sorted(self.excluded),
@@ -268,35 +312,47 @@ class Session:
         from .recovery import atomic_json
         atomic_json(self.path/"summary.json",summary)
 
+    INVENTORY_HEADER = ["protocol", "address", "name", "last_rssi_dbm", "first_seen_unix",
+                             "last_seen_unix", "observations", "classification", "rule_rank", "evidence",
+                             "mac_vendor", "vendor_lookup_status", "bluetooth_context_json", "observed_ssids_json", "first_location_json", "last_location_json", "strongest_location_json", "local_label", "bookmarked", "security_json", "known"]
+
+    def inventory_row(self,device):
+        obs = device.obs
+        hit = device.hits[0] if device.hits else None
+        # Quoted CSV fields still need spreadsheet-formula protection.
+        name = device.ap_name or obs.name
+        if name.lstrip().startswith(("=", "+", "-", "@")):
+            name = "'" + name
+        vendor_name = device.vendor.get("name", "")
+        if vendor_name.lstrip().startswith(("=", "+", "-", "@")):
+            vendor_name = "'" + vendor_name
+        return [obs.protocol, obs.address, name, obs.rssi, device.first_seen,
+                         obs.timestamp, device.seen, hit.label if hit else "Unclassified",
+                         hit.score if hit else "", hit.evidence if hit else "", vendor_name,
+                         device.vendor.get("status", "unavailable"),
+                         json.dumps(device.bluetooth, ensure_ascii=True, separators=(",", ":")),
+                         json.dumps(device.ssid_names,ensure_ascii=True,separators=(",", ":")),
+                         json.dumps(device.first_location),json.dumps(device.last_location),
+                         json.dumps(device.strongest_location),
+                         ("'" if self.config.get('device_notes',{}).get(device_key(obs),{}).get('label','').lstrip().startswith(('=','+','-','@')) else '')+self.config.get('device_notes',{}).get(device_key(obs),{}).get('label',''),
+                         self.config.get('device_notes',{}).get(device_key(obs),{}).get('bookmark',False),json.dumps(device.security),self.config.get('device_notes',{}).get(device_key(obs),{}).get('known',False)]
+
     def write_inventory(self,path):
         with path.open("w", newline="", encoding="utf-8") as stream:
             writer = csv.writer(stream)
-            writer.writerow(["protocol", "address", "name", "last_rssi_dbm", "first_seen_unix",
-                             "last_seen_unix", "observations", "classification", "rule_rank", "evidence",
-                             "mac_vendor", "vendor_lookup_status", "bluetooth_context_json", "observed_ssids_json", "first_location_json", "last_location_json", "strongest_location_json", "local_label", "bookmarked", "security_json", "known"])
-            for device in self.visible():
-                obs = device.obs
-                hit = device.hits[0] if device.hits else None
-                # Quoted CSV fields still need spreadsheet-formula protection.
-                name = device.ap_name or obs.name
-                if name.lstrip().startswith(("=", "+", "-", "@")):
-                    name = "'" + name
-                vendor_name = device.vendor.get("name", "")
-                if vendor_name.lstrip().startswith(("=", "+", "-", "@")):
-                    vendor_name = "'" + vendor_name
-                writer.writerow([obs.protocol, obs.address, name, obs.rssi, device.first_seen,
-                                 obs.timestamp, device.seen, hit.label if hit else "Unclassified",
-                                 hit.score if hit else "", hit.evidence if hit else "", vendor_name,
-                                 device.vendor.get("status", "unavailable"),
-                                 json.dumps(device.bluetooth, ensure_ascii=True, separators=(",", ":")),
-                                 json.dumps(device.ssid_names,ensure_ascii=True,separators=(",", ":")),
-                                 json.dumps(device.first_location),json.dumps(device.last_location),
-                                 json.dumps(device.strongest_location),
-                                 ("'" if self.config.get('device_notes',{}).get(device_key(obs),{}).get('label','').lstrip().startswith(('=','+','-','@')) else '')+self.config.get('device_notes',{}).get(device_key(obs),{}).get('label',''),
-                                 self.config.get('device_notes',{}).get(device_key(obs),{}).get('bookmark',False),json.dumps(device.security),self.config.get('device_notes',{}).get(device_key(obs),{}).get('known',False)])
+            writer.writerow(self.INVENTORY_HEADER)
+            for device in self.visible():writer.writerow(self.inventory_row(device))
             stream.flush();os.fsync(stream.fileno())
 
     def checkpoint(self,force=False):
+        # Explicit synchronous checkpoints must not race an incremental write.
+        job=getattr(self,'checkpoint_job',None)
+        if job is not None:
+            job.thread.join()
+            if not job.error:
+                self.checkpoint_at=job.data['checkpointed'];self.checkpoint_generation=job.generation
+            self.checkpoint_job=None
+        self.checkpoint_pending=None
         now=time.monotonic()
         if self.closed or (not force and now<self.next_checkpoint):return
         self.next_checkpoint=now+15
@@ -305,12 +361,51 @@ class Session:
             slot=(self.checkpoint_generation+1)%2;name='devices-checkpoint-%d.csv'%slot
             temporary=self.path/(name+'.tmp')
             self.write_inventory(temporary);os.chmod(temporary,0o600);temporary.replace(self.path/name)
-            data={'version':'1.0.8','started':self.started,'checkpointed':time.time(),'inventory':name,
-                  'observation_bytes':self.bytes_written,'discovery_bytes':self.discovery_bytes,
-                  'observations_processed':self.events,'geotagged_observations':self.located_events,'gps_reasons':dict(self.gps_coverage),
-                  'addresses_retained':len(self.devices),'evictions':self.evicted,'field_summary':self.field_summary(),
-                  'reliability':self.reliability,'log_error':self.log_error,'discovery_error':self.discovery_error}
+            data=self.checkpoint_data(name)
             from .recovery import atomic_json
             atomic_json(self.path/'checkpoint.json',data)
             self.checkpoint_at=data['checkpointed'];self.checkpoint_generation+=1;self.checkpoint_error=''
         except OSError as exc:self.checkpoint_error='Checkpoint failed: '+str(exc)[:120]
+
+    def checkpoint_data(self,name):
+        return {'version':'1.0.11','started':self.started,'checkpointed':time.time(),'inventory':name,
+              'observation_bytes':self.bytes_written,'discovery_bytes':self.discovery_bytes,
+              'observations_processed':self.events,'geotagged_observations':self.located_events,'gps_reasons':dict(self.gps_coverage),
+              'addresses_retained':len(self.devices),'evictions':self.evicted,'field_summary':self.field_summary(),
+              'reliability':self.reliability,'log_error':self.log_error,'discovery_error':self.discovery_error}
+
+    def checkpoint_step(self,budget=.003):
+        """Prepare a few immutable rows per turn; storage sync stays off the UI thread."""
+        from .responsive import CheckpointWrite
+        job=getattr(self,'checkpoint_job',None)
+        if job is not None:
+            if job.thread.is_alive():return
+            self.checkpoint_error=job.error
+            if not job.error:
+                self.checkpoint_at=job.data['checkpointed'];self.checkpoint_generation=job.generation
+            self.checkpoint_job=None
+        if self.closed:return
+        now=time.monotonic()
+        pending=getattr(self,'checkpoint_pending',None)
+        if pending is None:
+            if now<self.next_checkpoint:return
+            self.next_checkpoint=now+15
+            slot=(self.checkpoint_generation+1)%2
+            data=self.checkpoint_data('devices-checkpoint-%d.csv'%slot)
+            data=json.loads(json.dumps(data))
+            pending={'keys':iter(list(self.devices)), 'rows':[self.INVENTORY_HEADER], 'data':data}
+            self.checkpoint_pending=pending
+        until=now+budget
+        for _ in range(32):
+            try:key=next(pending['keys'])
+            except StopIteration:
+                data=pending['data']
+                data['summary_captured_at']=data['checkpointed']
+                data['checkpointed']=time.time()
+                data['addresses_retained']=len(pending['rows'])-1
+                self.checkpoint_job=CheckpointWrite(self.path,pending['rows'],data,self.checkpoint_generation+1)
+                self.checkpoint_pending=None
+                return
+            device=self.devices.get(key)
+            if device is not None:pending['rows'].append(self.inventory_row(device))
+            if time.monotonic()>=until:return

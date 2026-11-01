@@ -15,6 +15,7 @@ import subprocess
 import tempfile
 import threading
 import time
+from .receiver_health import ReceiveHealth, MetadataWatchdog
 from .adapters import adapter_rows, interface_metadata, valid_interface
 from .hci import RawHciParser, AdvertisementCache, hcitool_name, open_hci_events, hci_event
 from .detection import Observation
@@ -196,6 +197,7 @@ def parse_iw(text, now):
 class Worker:
     def __init__(self, sink):
         self.sink = sink
+        self.receive_health = ReceiveHealth()
         self.stop_event = threading.Event()
         self.thread = None
         self.status = "not started"
@@ -267,6 +269,10 @@ class WifiWorker(Worker):
         self.adapter_refresh_event=threading.Event()
         from .runtime import RadioCoordinator
         self.operations=RadioCoordinator()
+
+    def emit(self, obs):
+        self.receive_health.mark('frames')
+        self.sink(obs)
 
     def publish_adapters(self, available):
         rows=adapter_rows(available)
@@ -431,6 +437,7 @@ class WifiWorker(Worker):
                                         if desired:
                                             cfg=dict(self.config,wifi_interface=desired['name'])
                                             child=WifiWorker(self.sink,cfg)
+                                            child.receive_health=self.receive_health
                                             child.track_frequency(self.target_frequency)
                                             identity=key
                                             self.adapter_policy_status=('External USB: ' if desired['external'] else 'Pager fallback: ')+desired['name']
@@ -581,7 +588,7 @@ class WifiWorker(Worker):
                     for obs in parse_iw(text, time.time()):
                         self.coverage.receive(obs)
                         if not self.stop_event.is_set():
-                            self.sink(obs)
+                            self.emit(obs)
                 except (RuntimeError, subprocess.TimeoutExpired) as exc:
                     self.status = "ERROR: passive scan: " + str(exc)[:100]
                 self.stop_event.wait(5)
@@ -693,7 +700,7 @@ class WifiWorker(Worker):
                     ready, _, _ = select.select([proc.stdout], [], [], 0.2)
                     if time.monotonic() >= next_emit:
                         for obs in pending.values():
-                            self.sink(obs)
+                            self.emit(obs)
                         pending.clear()
                         next_emit = time.monotonic() + 1
                     if not ready:
@@ -713,7 +720,7 @@ class WifiWorker(Worker):
                     self.status = "ERROR: capture stopped: " + errors.read().decode(errors="replace")[-160:]
             finally:
                 for obs in pending.values():
-                    self.sink(obs)
+                    self.emit(obs)
                 self.close_process()
                 restore=self.monitor_original_frequency if self.owned_monitor else selected.get('frequency')
                 if hop and restore is not None:
@@ -736,10 +743,45 @@ class BleWorker(Worker):
                         "last_packet":0,"last_observation":0,"last_error":""}
         self.candidates = OrderedDict()
         self.cached_candidates = []
+        self.signature_candidates = OrderedDict()
+        self.emit_cache = OrderedDict()
+
+    def received(self, obs, kind='reports'):
+        self.receive_health.mark(kind)
+        if obs.uuids or obs.manufacturer or obs.service_data:
+            self.receive_health.mark('metadata')
+        self.receive_health.sample(obs,self.config)
 
     def emit(self, obs):
+        # Keep new evidence immediately; suppress only redundant bursts for 500 ms.
+        now=time.monotonic()
+        fingerprint=(obs.name,obs.address_type,tuple(obs.uuids),tuple(sorted(obs.manufacturer.items())),
+                     tuple(sorted(obs.service_data.items())),obs.metadata_source)
+        previous=self.emit_cache.get(obs.address)
+        delta=abs(obs.rssi-previous[2]) if previous and obs.rssi is not None and previous[2] is not None else 0
+        if previous and previous[1]==fingerprint and now-previous[0]<.5 and delta<4:
+            self.metrics['coalesced_reports']=self.metrics.get('coalesced_reports',0)+1
+            return
+        self.emit_cache[obs.address]=(now,fingerprint,obs.rssi)
+        self.emit_cache.move_to_end(obs.address)
+        while len(self.emit_cache)>2048:self.emit_cache.popitem(last=False)
         self.metrics["observations"] += 1
         self.metrics["last_observation"] = obs.timestamp
+        services = {u.lower() for u in obs.uuids + list(obs.service_data)}
+        metadata = bool(services or obs.manufacturer)
+        self.metrics['metadata_observations'] = self.metrics.get('metadata_observations', 0) + int(metadata)
+        reasons = []
+        if any(u in services or '0000'+u+'-0000-1000-8000-00805f9b34fb' in services for u in ('feed','feec','fd84')):
+            reasons.append('Tile service received')
+        if '76' in obs.manufacturer:
+            reasons.append('Apple manufacturer data received')
+        if '2504' in obs.manufacturer or obs.address.upper().startswith('B4:1E:52:') or any(n in obs.name.lower() for n in ('flock','penguin','fs ext battery','pigvision')):
+            reasons.append('Flock-related identifier received')
+        if reasons:
+            self.signature_candidates.pop(obs.address, None)
+            self.signature_candidates[obs.address] = {'observation': obs.to_dict(), 'reason': reasons}
+            while len(self.signature_candidates) > 32:
+                self.signature_candidates.popitem(last=False)
         reason = []
         if any(u.lower() in {"3080","3081","3082","3083"} or
                u.lower() in {"0000"+n+"-0000-1000-8000-00805f9b34fb" for n in ("3080","3081","3082","3083")} for u in obs.uuids+list(obs.service_data)):
@@ -801,6 +843,8 @@ class BleWorker(Worker):
         match = re.search(r"Controller\s+([0-9a-fA-F:]{17})",show)
         self.metrics["controller"] = match.group(1) if match else controller or "default"
         parser = BluezParser()
+        metadata_generation=0
+        property_times=OrderedDict()
         master, slave = pty.openpty()
         try:
             self.proc = subprocess.Popen(["bluetoothctl"], stdin=slave, stdout=slave,
@@ -839,7 +883,17 @@ class BleWorker(Worker):
                 if time.monotonic() - last_flush >= 1:
                     observations = parser.drain()
                     for obs in observations:
+                        if obs.timestamp > property_times.get(obs.address,0):
+                            self.receive_health.mark('reports')
+                            property_times[obs.address]=obs.timestamp
+                            property_times.move_to_end(obs.address)
+                            while len(property_times)>2048:property_times.popitem(last=False)
+                        if parser.metadata_generation != metadata_generation and any(obs.metadata_seen.values()):
+                            self.receive_health.sample(obs,self.config)
                         self.emit(obs)
+                    if parser.metadata_generation != metadata_generation:
+                        self.receive_health.mark('metadata')
+                        metadata_generation=parser.metadata_generation
                     tick = time.monotonic()
                     if self.config.get("ble_info_lookup", True) and not controller and tick >= next_info:
                         candidates = [o for o in observations if tick - queried.get(o.address, -999) >= 120]
@@ -964,6 +1018,8 @@ class BleWorker(Worker):
                 self.metrics["receiver"] = "hcidump"
             self.proc = launch(["hcitool", "-i", hci, "lescan", "--duplicates"], "name")
             scan = self.proc
+            receiver_started = time.monotonic()
+            watchdog = MetadataWatchdog(receiver_started)
             while not self.stop_event.is_set() and scan.poll() is None:
                 ready, _, _ = select.select(list(buffers)+([raw_socket] if raw_socket else []), [], [], 0.2)
                 for descriptor in ready:
@@ -972,10 +1028,13 @@ class BleWorker(Worker):
                             packet = raw_socket.recv(4096)
                         except BlockingIOError:
                             continue
+                        self.receive_health.mark("raw_packets")
                         self.metrics["raw_packets"] += 1
                         self.metrics["last_packet"] = time.time()
                         self.diagnostics.append("HCI PACKET " + packet[:260].hex())
                         for obs in hci_event(packet):
+                            watchdog.report(time.monotonic())
+                            self.received(obs)
                             counts["raw"] += 1
                             self.metrics["decoded_reports"] += 1
                             self.diagnostics.append("HCI ADV " + obs.address + " " + obs.name + " UUID " + ",".join(obs.uuids))
@@ -1000,16 +1059,27 @@ class BleWorker(Worker):
                             obs = hcitool_name(text)
                             observations = [obs] if obs else []
                         for obs in observations:
+                            if kind == "raw":
+                                watchdog.report(time.monotonic())
+                                self.received(obs)
+                            else:
+                                watchdog.name(time.monotonic())
+                                self.receive_health.mark("names")
                             counts[kind] += 1
                             self.metrics["decoded_reports" if kind == "raw" else "name_lines"] += 1
                             if kind == "raw":
                                 self.metrics["last_packet"] = time.time()
                             self.emit(cache.merge(obs))
+                stalled_metadata = watchdog.stalled(time.monotonic())
+                if stalled_metadata and self.config.get('ble_backend', 'auto') == 'auto':
+                    raise RuntimeError('Bluetooth names received but no raw advertising metadata recently; trying BlueZ metadata receiver')
+                if raw_proc is not None and raw_proc.poll() is not None and self.config.get('ble_backend','auto') == 'auto':
+                    raise RuntimeError('Raw advertising receiver stopped; trying BlueZ metadata receiver')
                 raw_active = raw_socket is not None or raw_proc is not None and raw_proc.poll() is None
                 if not raw_active:
                     self.metrics["receiver"] = "names only"
                 self.status = "%s hcitool | names %d | raw %d%s" % (hci, counts["name"], counts["raw"],
-                    "" if raw_active else " (names only; no RSSI/UUID)")
+                    " (raw reports stale; tracker detection limited)" if stalled_metadata else "" if raw_active else " (names only; no RSSI/UUID)")
             if not self.stop_event.is_set():
                 raise RuntimeError("hcitool scan stopped; see Bluetooth diagnostics")
         finally:

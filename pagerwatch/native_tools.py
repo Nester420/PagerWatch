@@ -1,3 +1,5 @@
+from .detection_check import check_target, device_row
+import textwrap
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Button-driven field tools; archive reads run off the capture/UI thread."""
 from dataclasses import asdict
@@ -129,7 +131,7 @@ class NativeTools:
         note=self.note(self.target)
         rule=next((r for r in self.s.session.config.get('watch_rules',[]) if r.get('kind')=='address' and r.get('target')==self.target),None)
         return ['Bookmark: '+('ON' if note.get('bookmark') else 'OFF'),'Known gear: '+('YES' if note.get('known') else 'NO'),
-                'Address watch: '+('ON' if rule and rule.get('enabled',True) else 'OFF'),'Track this signal','Exclude future sightings...','Research / past sightings']
+                'Address watch: '+('ON' if rule and rule.get('enabled',True) else 'OFF'),'Track this signal','Exclude future sightings...','Research / past sightings','Why detected / not alerted?']
 
     def input(self,pressed):
         p=self.s.p
@@ -138,12 +140,17 @@ class NativeTools:
             if self.job is not None:self.generation+=1
             if self.view in ('summary','gps','known','sessions','device'):self.close()
             elif self.view in ('run','compare','review','delete'):self.view='sessions';self.preview=None;self.index=0
+            elif self.view=='detection':self.view='device';self.index=0
             elif self.view=='research':self.view='device' if self.s.detail else 'inventory';self.index=0
             elif self.view=='research':self.view='device' if self.s.detail else 'inventory';self.index=0
             elif self.view=='inventory':self.view='review';self.index=0
             elif self.view=='unmark':self.view='known'
             return
         if not pressed:return
+        if self.view=='detection':
+            if pressed & p.BTN_UP:self.index=max(0,self.index-1)
+            elif pressed & p.BTN_DOWN:self.index=min(max(0,len(self.check_lines)-6),self.index+1)
+            return
         if self.view in ('summary','gps'):return
         if self.view=='delete':
             if pressed & p.BTN_A and self.preview:
@@ -175,6 +182,16 @@ class NativeTools:
                     elif self.index==3:
                         if self.target not in self.s.session.devices:raise ValueError('Target no longer retained')
                         self.s.hunt_key=self.target;self.s.hunt_sound=False;self.close()
+                    elif self.index==6:
+                        session=self.s.session;device=session.devices.get(self.target)
+                        if not device:raise ValueError('Target no longer retained')
+                        protocol,address=self.target.split(':',1)
+                        result=check_target({'rules_version':session.detector.version,'devices':[device_row(self.target,device,session)]},
+                            {'excluded':list(session.excluded),'threshold':session.config.get('alert_threshold',75),'profile':session.config.get('scan_profile')},protocol,address,self.s.hide_known)
+                        lines=[result['decision'].replace('_',' '),'Rules '+str(result['rules_version'])+' / threshold '+str(result['alert_threshold'])]+result['notes']
+                        lines += [h['label']+' / score '+str(h['score']) for h in result['matches']]
+                        self.check_lines=[part for line in lines for part in textwrap.wrap(line,68)]
+                        self.view='detection';self.index=0
                     elif self.index==5:
                         self.research_pages=[];self.load_research(0)
                     elif self.index==5:
@@ -313,6 +330,7 @@ class NativeTools:
         return [part for line in lines for part in (textwrap.wrap(str(line),74) or [''])]
 
     def footer(self):
+        if self.view=='detection':return 'UP/DN scroll  B device actions'
         if self.view=='device':return 'UP/DN select  A apply  B details'
         if self.view=='sessions':return 'UP/DN select  A open  LEFT/RIGHT pages  B back'
         if self.view=='run':return 'UP/DN select  A open  B saved runs'
@@ -395,6 +413,11 @@ class NativeTools:
 
     def draw(self,now):
         s=self.s
+        if self.view=='detection':
+            self.title('DETECTION CHECK',self.address(self.target))
+            if self.private:s.text(10,111,'Detection details hidden by Privacy.',AMBER);return
+            for i,line in enumerate(self.check_lines[self.index:self.index+6]):s.text(10,96+i*15,line,FG)
+            return
         if self.view=='summary':self.draw_summary(s.session.field_summary());return
         if self.view=='gps':self.draw_gps();return
         if self.view=='known':

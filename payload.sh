@@ -2,7 +2,7 @@
 # Title: PagerWatch
 # Description: Wi-Fi/BLE awareness: Axon, Flock, trackers and related device signatures. Prototype; hardware validation required.
 # Author: Nester project / Codex-assisted prototype; upstream research credited in NOTICE.md
-# Version: 1.0.8
+# Version: 1.0.11
 # Category: Reconnaissance
 
 # The Pager may stage this script in /tmp. Its source path is not necessarily

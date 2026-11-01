@@ -1,3 +1,4 @@
+from .detection_check import check_target
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Local HTTPS companion. HTTP threads consume snapshots; controls run on the scanner thread."""
 from collections import OrderedDict, deque
@@ -46,6 +47,7 @@ class WebService:
         self.phone=PhoneGPS();self.bridge=PhoneGPSBridge(self.phone)
         self.lock=threading.Lock();self.state={};self.sessions=OrderedDict();self.attempts=OrderedDict()
         self.commands=queue.Queue(maxsize=32);self.results=deque(maxlen=32)
+        self.detection_checks=deque(maxlen=32);self.check_policy={}
         self.points=deque(maxlen=5000);self.point_times=OrderedDict()
         self.status='Starting HTTPS';self.pin='';self.fingerprint='';self.url='';self.server=None;self.thread=None
         self.archive=None;self.discovery_path=None;self.discovery_bytes=0;
@@ -179,6 +181,11 @@ class WebService:
                     self.response(h,status,{'ok':bool(token),'error':'' if token else 'Too many attempts. Wait one minute.' if status==429 else 'Incorrect access code'},
                         headers={'Set-Cookie':'pw_session=%s; Path=/; HttpOnly; Secure; SameSite=Strict'%token} if token else None);return
                 if not owner:self.response(h,401,{'error':'Enter the access code from the Pager WEB tab'});return
+                if path=='/api/detection/check':
+                    with self.lock:
+                        value=check_target(self.state,self.check_policy,data.get('protocol'),data.get('address'),data.get('hide_known') is True)
+                        self.detection_checks.append(value)
+                    self.response(h,200,value);return
                 if path=='/api/research/note':
                     value=self.research_store.save(data.get('key'),data.get('notes'),data.get('links'),data.get('revision'))
                     self.response(h,200,{'notebook':value,'storage':self.research_store.status()});return
@@ -365,7 +372,7 @@ class WebService:
                     # List/radar views do not need three GPS fixes, evidence byte tables
                     # and per-device history on every poll. Selected details remain full.
                     fields=('key','protocol','address','name','network_name','local_label','bookmarked','known','rssi_average','rssi_samples','rssi_average_age',
-                            'rssi','last_rssi','rssi_age','age','frame','wifi_role','ssid_status','hits','vendor')
+                            'rssi','last_rssi','rssi_age','age','frame','wifi_role','ssid_status','hits','vendor','signature_last_seen','current_rule_ids')
                     state['devices']=[dict({k:d.get(k) for k in fields},history=[],uuids=[],manufacturer={},bluetooth={}) if d['key']!=chosen else d for d in state.get('devices',[])]
                     state['points']=[]
                 state['gps']=self.phone.status(owner,include_trail=view=='full');state['gps']['health']=gps_health(state['gps']);state['bridge']=self.bridge.status
@@ -468,8 +475,15 @@ class WebService:
     def wants_snapshot(self):
         return time.monotonic()-self.last_request<10
 
+    def detection_check_snapshot(self):
+        with self.lock:
+            return list(self.detection_checks)
+
     def publish(self,session,workers,dropped=0):
-        began=time.monotonic()
+        for _ in self.publish_steps(session,workers,dropped):pass
+
+    def publish_steps(self,session,workers,dropped=0):
+        began=time.monotonic();slice_started=began;active_seconds=0
         self.detector=session.detector
         self.archive=SessionArchive(session.path.parent)
         now=time.time();devices=[]
@@ -485,11 +499,19 @@ class WebService:
                 'bookmarked':self.config.get('device_notes',{}).get(key,{}).get('bookmark',False),
                 'known':self.config.get('device_notes',{}).get(key,{}).get('known',False),**d.signal_average(now),
                 'security':d.security,'security_time':d.security_time,
-                'hits':[asdict(hit) for hit in d.hits],'vendor':d.vendor,'bluetooth':d.bluetooth,
+                'hits':[asdict(hit) for hit in d.hits],
+                'signature_last_seen':{r:stamp for r,(hit,stamp) in d.signature_history.items()},
+                'current_rule_ids':list(d.current_rule_ids),'alerted':key in session.alerted_keys,
+                'probe_ssid_status':o.probe_ssid_status,
+                'vendor':d.vendor,'bluetooth':d.bluetooth,
                 'history':list(d.history),'ssids':list(d.ssid_names),'network_name':d.ap_name,
                 'first_location':d.first_location,'last_location':d.last_location,'strongest_location':d.strongest_location})
+            if len(devices)%16==0:
+                active_seconds+=time.monotonic()-slice_started
+                yield None
+                slice_started=time.monotonic()
         coverage=getattr(workers.get('Wi-Fi'),'coverage',None)
-        state={'coverage':coverage.snapshot() if coverage else {},'version':'1.0.8','session':session.path.name,'now':now,'started':session.started,
+        state={'rules_version':session.detector.version,'coverage':coverage.snapshot() if coverage else {},'version':'1.0.11','session':session.path.name,'now':now,'started':session.started,
                'session_label':small_json(session.path/'session-info.json',4096).get('label',''),
                'profile':self.config.get('scan_profile','survey'),'privacy':self.config.get('privacy_mode',False),
                'field_summary':session.field_summary(),'restore_pending':self.restore_pending,
@@ -500,7 +522,12 @@ class WebService:
                'storage':session.storage_health.snapshot(session),
                'devices':devices,'alerts':list(session.alerts),'processed':session.events,'observation_bytes':session.bytes_written,
                'dropped':dropped,'evicted':session.evicted,'log_error':session.log_error,
+               'detection_health':{'alert_threshold':self.config.get('alert_threshold',75),
+                 'matched_addresses':sum(bool(d.hits) for d in session.devices.values()),
+                 'below_threshold':sum(bool(d.hits) and max(h.score for h in d.hits)<self.config.get('alert_threshold',75) for d in session.devices.values()),
+                 'alerts_recorded':len(session.alerted_keys)},
                'scanners':{key:{'status':w.status,'metrics':dict(getattr(w,'metrics',{})),
+                               'receive_health':getattr(getattr(w,'receive_health',None),'snapshot',lambda:{})(),
                                'channels':[]} for key,w in workers.items()},
                'config':{key:self.config.get(key) for key in ('wifi_scan_mode','wifi_interface','ble_backend')},
                'wifi_adapters':getattr(workers.get('Wi-Fi'),'adapter_snapshot',lambda:{})(),
@@ -508,8 +535,10 @@ class WebService:
                'discovery_count':len(session.discovery_keys),'discovery_error':session.discovery_error,
                'geotagged_observations':session.located_events,'geotagged_devices':sum(d.last_location is not None for d in session.devices.values()),
                'report_ready':(session.path/'diagnostic-report.zip').is_file()}
-        state['snapshot_ms']=round((time.monotonic()-began)*1000,2)
+        state['snapshot_ms']=round((active_seconds+time.monotonic()-slice_started)*1000,2)
+        state['snapshot_span_ms']=round((time.monotonic()-began)*1000,2)
         with self.lock:
             self.discovery_path=session.path/'discoveries.jsonl';self.discovery_bytes=session.discovery_bytes
+            self.check_policy={'excluded':list(session.excluded),'threshold':self.config.get('alert_threshold',75),'profile':self.config.get('scan_profile','survey')}
             self.state=state;self.log_path=session.path/'observations.jsonl';self.log_bytes=session.bytes_written
             self.report_path=session.path/'diagnostic-report.zip'

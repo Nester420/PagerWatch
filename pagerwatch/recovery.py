@@ -46,7 +46,11 @@ def recover_tail(directory,checkpoint,devices,limit=4*1024*1024):
             try:
                 row=json.loads(line);o=row['observation'];protocol=o['protocol'];address=o['address'].upper()
                 if protocol not in ('wifi','ble') or not re.fullmatch(r'(?:[0-9A-F]{2}:){5}[0-9A-F]{2}',address):raise ValueError()
-                key=protocol+':'+address;old=result.pop(key,{})
+                key=protocol+':'+address
+                existing=result.get(key,{})
+                if isinstance(existing.get('last_seen'),(int,float)) and isinstance(o.get('timestamp'),(int,float)) and o['timestamp']<=existing['last_seen']:
+                    count+=1;continue
+                old=result.pop(key,{})
                 note=row.get('local_note') or {};fix=row.get('observer_location')
                 if not isinstance(fix,dict):fix=None
                 if fix:fix=dict(fix,observed_at=o.get('timestamp'),rssi=o.get('rssi'))

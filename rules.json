@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-24-wardrive-probes-1",
+  "version": "2026-10-26-tracker-reliability-1",
   "rules": [
     {
       "id": "axon-bwc",
@@ -203,10 +203,10 @@
         {
           "field": "name",
           "op": "regex",
-          "value": "^Flock-[0-9a-f]{4,}$"
+          "value": "^Flock(?:$|-[0-9a-f]{4,}$)"
         }
       ],
-      "evidence": "Flock- network name followed by a hexadecimal identifier; spoofing remains possible.",
+      "evidence": "Bare Flock network name or Flock- hexadecimal name; spoofing remains possible.",
       "source": "https://github.com/soyboi1312/all-cameras-are-beacons/blob/a54bf934591ef3e9cc9187327d0d88b2f887da3b/docs/signatures.md"
     },
     {
@@ -256,6 +256,7 @@
       "category": "FLOCK / ALPR",
       "score": 80,
       "protocols": [
+        "wifi",
         "ble"
       ],
       "conditions": [
@@ -608,7 +609,7 @@
       "id": "tracker-tile",
       "label": "Tile tracker service",
       "category": "TRACKER",
-      "score": 65,
+      "score": 75,
       "protocols": [
         "ble"
       ],
@@ -626,7 +627,7 @@
       "id": "tracker-tile-alt",
       "label": "Tile tracker service",
       "category": "TRACKER",
-      "score": 65,
+      "score": 75,
       "protocols": [
         "ble"
       ],
@@ -644,19 +645,19 @@
       "id": "apple-findmy",
       "label": "Apple Find My broadcast",
       "category": "TRACKER",
-      "score": 70,
+      "score": 75,
       "protocols": [
         "ble"
       ],
       "conditions": [
         {
-          "field": "company_payload:0x004c",
-          "op": "hex_prefix",
-          "value": "1219"
+          "field": "apple_findmy_kind",
+          "op": "equal",
+          "value": "findmy"
         }
       ],
-      "evidence": "Apple Find My-style manufacturer frame 0x12/0x19; may be an accessory other than AirTag.",
-      "source": "https://github.com/CIS-C0/RFSentinel/blob/a9a5b615499b49a34abf940ddad3e3c507840972/docs/SIGNATURES.md"
+      "evidence": "Complete Apple manufacturer type 0x12 Find My record with a supported length. May be a Find My accessory other than AirTag; not proof of unwanted tracking.",
+      "source": "https://adamcatley.com/AirTag.html"
     },
     {
       "id": "google-findhub",
@@ -1070,6 +1071,42 @@
       ],
       "evidence": "Transmitter prefix and a complete wildcard probe match Wardrive Go's 32-prefix candidate heuristic. These include shared chipsets and a locally administered prefix; ordinary devices can also match. This is a possible Flock lead, not a confirmed camera or manufacturer identification.",
       "source": "https://github.com/RocketGod-git/wardrive-go/blob/b30f16fb3b31807b2526678db2de12c377e09ff6/app/src/main/java/com/rocketgod/warble/classify/NotableDevices.kt"
+    },
+    {
+      "id": "apple-airtag-compatible",
+      "label": "AirTag-compatible Find My signature",
+      "category": "TRACKER",
+      "score": 80,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "apple_findmy_kind",
+          "op": "equal",
+          "value": "airtag"
+        }
+      ],
+      "evidence": "Complete Apple type 0x12 record with AirTag-compatible device-type status bits. Includes supported short and offline forms. Advertisements can be spoofed; this is not a confirmed product identity or a stalking determination.",
+      "source": "https://github.com/seemoo-lab/AirGuard"
+    },
+    {
+      "id": "tracker-tile-fd84",
+      "label": "Tile tracker service",
+      "category": "TRACKER",
+      "score": 75,
+      "protocols": [
+        "ble"
+      ],
+      "conditions": [
+        {
+          "field": "uuid",
+          "op": "contains",
+          "value": "fd84"
+        }
+      ],
+      "evidence": "Advertised Tile-assigned service UUID 0xFD84, in a service list or service-data field. Does not establish unwanted tracking.",
+      "source": "https://www.bluetooth.com/specifications/assigned-numbers/"
     }
   ]
 }

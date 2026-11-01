@@ -24,6 +24,27 @@ def normalize_mac(value):
     return ":".join(compact[i:i+2] for i in range(0, 12, 2)).upper()
 
 
+def apple_findmy_kind(obs):
+    """Decode complete Apple type-0x12 records, including short owner-nearby forms.
+
+    Advertising signatures are spoofable; an AirTag-compatible status is a clue.
+    """
+    try:
+        payload = bytes.fromhex(obs.manufacturer.get("76", ""))
+    except (TypeError, ValueError):
+        return ""
+    pos = 0
+    while pos + 2 <= len(payload):
+        kind, size = payload[pos:pos+2]
+        end = pos + 2 + size
+        if end > len(payload):
+            return ""
+        if kind == 0x12 and size in (2, 25):
+            return "airtag" if payload[pos+2] & 0x30 == 0x10 else "findmy"
+        pos = end
+    return ""
+
+
 def uuid128(value):
     value = value.lower().removeprefix("0x")
     if len(value) == 4:
@@ -48,6 +69,7 @@ class Observation:
     metadata_source: str = "advertisement"
     security: dict = field(default_factory=dict)
     ssid_status: str = ""
+    metadata_seen: dict = field(default_factory=dict)  # receive times for merged BLE fields
     probe_ssid_status: str = ""  # wildcard/directed/missing/incomplete/invalid; no requested SSID retained
 
     def to_dict(self):
@@ -70,10 +92,15 @@ class Hit:
 
 class Detector:
     def __init__(self, path):
-        with open(path) as stream:
-            document = json.load(stream)
+        from pathlib import Path
+        self.path = Path(path)
+        import hashlib
+        raw = self.path.read_bytes()
+        self.rules_sha256 = hashlib.sha256(raw).hexdigest()
+        document = json.loads(raw)
         self.version = document["version"]
         self.rules = document["rules"]
+        self.rule_index = {rule["id"]: rule for rule in self.rules}
         for rule in self.rules:
             if not 0 <= rule["score"] <= 100 or not rule["conditions"]:
                 raise ValueError("Invalid rule: " + rule["id"])
@@ -95,6 +122,8 @@ class Detector:
     @staticmethod
     def matches(obs, condition):
         key, op, expected = condition["field"], condition["op"], condition["value"]
+        if key == "apple_findmy_kind":
+            return apple_findmy_kind(obs) == expected
         if key == "company":
             return str(int(expected, 0)) in obs.manufacturer
         if key == "uuid":

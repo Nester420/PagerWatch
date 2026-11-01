@@ -1,4 +1,4 @@
-PAGERWATCH 1.0.8 — FIELD CHECK
+PAGERWATCH 1.0.11 — FIELD CHECK
 
 1. Start: check Field reliability and confirm active capture interface.
    Receiving observations confirms reception. Quiet RF alone is not failure.
@@ -72,7 +72,7 @@ PAGERWATCH 1.0.8 — FIELD CHECK
 Record Pager firmware, adapter model/driver, active interface and test result.
 Host tests simulate faults; this checklist validates behavior on your hardware.
 
-RECON CLEANUP CHECK — 1.0.8
+RECON CLEANUP CHECK — 1.0.11
 - Confirm Handshakes and deauth controls are absent from the dashboard and
   Pager device menus. Device actions should wrap correctly through six items.
 - Launch after an overwrite update. The retired module should be removed;
@@ -86,7 +86,7 @@ RECON CLEANUP CHECK — 1.0.8
   a brief phone disconnect. Quiet RF must not trigger receiver resets.
 - Download diagnostics after any remaining error and note the active adapter.
 
-MAC DETECTION CHECK — 1.0.8
+MAC DETECTION CHECK — 1.0.11
 - Compare the exact observed MAC and Wi-Fi/Bluetooth type with your other
   detector. Find the same address in PagerWatch Devices, not only Alerts.
 - A B4:1E:52 Wi-Fi transmitter or public Bluetooth address should show the
@@ -98,7 +98,7 @@ MAC DETECTION CHECK — 1.0.8
 - If still missed, save diagnostics and record the other detector's MAC,
   protocol, channel and timestamp. Do not assume a shared chipset is Flock.
 
-WARDRIVE PROBE CHECK — 1.0.8
+WARDRIVE PROBE CHECK — 1.0.11
 - Near your local camera, compare its exact MAC in Wardrive Go and PagerWatch.
   Try 2.4 GHz mode and confirm the active receiver is receiving traffic.
 - For a listed shared prefix sending a wildcard probe, expect Possible Flock
@@ -107,3 +107,57 @@ WARDRIVE PROBE CHECK — 1.0.8
   candidate rule. Ordinary devices may also send matching wildcard probes.
 - If still missed, export diagnostics and capture the MAC/protocol/channel
   reported by the other detector. Reception and classification are separate.
+
+RADAR / TRACKER CHECK — 1.0.11
+- Compare the exact radio address and protocol against another detector.
+- Radar defaults to Session contacts. Wait over 30 seconds without receiving
+  a contact: it should remain dimmed. Test Live (30s) and Recent (5m) filters.
+  Unknown RSSI should appear hollow at the edge, not as an invented strength.
+- Present your own Tile and AirTag separately. Check scanner metadata counts,
+  Device signature evidence, and Alerts. AirTags may use different formats
+  depending on state; quiet/connected devices may not emit a matching record.
+- A later name-only packet must not erase prior evidence or generate repeated
+  alerts for one exact address/session. Verify last-observed signature times.
+- Check default threshold 75 and filters: a higher threshold, exclusions or
+  Hide known devices may suppress feedback/display. Quiet profile suppresses
+  sound/vibration; it does not remove recorded matches.
+- For Flock, inspect the exact MAC and observed signature evidence. A shared
+  wildcard-probe candidate is not a confirmed camera. Try 2.4 GHz coverage.
+- If detection fails, export Controls & exports > Build diagnostic report
+  immediately while the comparison detector still sees the target. Record
+  the target MAC/protocol, Pager firmware and USB adapter, plus a screenshot
+  of the affected live view. Redact location data if sharing publicly.
+
+1.0.11 RELEASE GATE — RECORD ACTUAL RESULTS
+Use FIELD-TEST-RESULTS.csv. Host simulations are not hardware verification.
+1. Present your own Tile, AirTag and local Flock radio separately. Record the
+   exact address/protocol, comparison detector, channel and time. Run Alerts >
+   Why wasn't this detected? Compare receipt, metadata, signature and decision.
+2. Trigger the same signature repeatedly. Expect one alert per exact address
+   and protocol/session; confirm Quiet and Hide known behavior separately.
+3. Leave Bluetooth scanning for at least 30 minutes. Watch recent report and
+   metadata ages. Quiet RF must not trigger repeated scanner changes. Export
+   diagnostics immediately if names keep arriving while metadata ages grow.
+4. Start with USB, unplug, confirm Pager fallback, replug, confirm USB choice.
+   Repeat five times. Confirm phone dashboard/AP remains usable throughout.
+5. Run a 60-minute drive with phone GPS shared. Check scanner ages, queue drops,
+   memory, recording health, session contacts after 30s, and exported sightings.
+6. Turn Privacy on while a detection check is pending: no target details should
+   remain visible. Downloaded diagnostics intentionally contain original data.
+7. Export diagnostics after any failure, noting time, firmware and adapter.
+   Save the ZIP alongside this result sheet; do not publish private identifiers.
+
+1.0.11 RESPONSIVENESS CHECK
+- Run at least 20 minutes in the same busy RF environment as the lag report.
+- Test rapid short UP/DOWN taps, tab switching, device actions and Back.
+- Repeat with the phone dashboard closed, then open. Note which tab is active.
+- Confirm checkpoints complete without recurring button freezes. Verify saved
+  inventories and journal updates after a normal exit and an interrupted run.
+- Confirm individual signature alerts remain recorded during a burst; physical
+  vibration is intentionally limited to one pulse per two seconds.
+- Check RSSI updates and detection when a new BLE service/manufacturer payload
+  appears between repeated advertisements. The raw receive counters count all
+  reports; redundant session emissions can be combined for up to 500 ms.
+- If lag returns, note duration/adapter/tab/dashboard connection, longest control
+  loop gap, slow turns, queue drops, memory and CPU. Export diagnostics before
+  restarting. Host timing results do not establish actual Pager input latency.

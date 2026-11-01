@@ -15,7 +15,7 @@ import zipfile
 from urllib.parse import quote_plus
 from .archive import SessionArchive,small_json
 from . import __version__
-from .detection import Observation
+from .detection import Observation, apple_findmy_kind
 from .notebook import radio_key,reference_url
 from .recovery import checkpoint_inventory
 
@@ -34,6 +34,8 @@ def device_record(device,notes=None):
     return dict(obs.to_dict(),key=key,local_label=note.get('label',''),network_name=device.ap_name,
                 first_seen=device.first_seen,last_seen=obs.timestamp,seen=device.seen,hits=[asdict(h) for h in device.hits],
                 vendor=device.vendor,bluetooth=device.bluetooth,security=device.security,
+                signature_last_seen={r:stamp for r,(hit,stamp) in device.signature_history.items()},
+                current_rule_ids=list(device.current_rule_ids),
                 first_location=device.first_location,last_location=device.last_location,strongest_location=device.strongest_location)
 
 
@@ -48,11 +50,13 @@ def identification(row,detector=None):
         if rule and obs:
             for condition in rule.get('conditions',[])[:12]:
                 field=condition['field']
-                observed=obs.manufacturer if field=='company' or field.startswith('company_payload:') else obs.uuids+list(obs.service_data) if field=='uuid' else obs.service_data if field.startswith('service_payload:') else dict(manufacturer=obs.manufacturer,service_data=obs.service_data) if field=='payload' else getattr(obs,field,'')
+                observed=obs.manufacturer if field=='company' or field.startswith('company_payload:') else obs.uuids+list(obs.service_data) if field=='uuid' else obs.service_data if field.startswith('service_payload:') else dict(manufacturer=obs.manufacturer,service_data=obs.service_data) if field=='payload' else apple_findmy_kind(obs) if field=='apple_findmy_kind' else getattr(obs,field,'')
                 tests.append(dict(field=field,op=condition['op'],expected=str(condition['value'])[:256],observed=str(observed)[:512],matched=bool(detector.matches(obs,condition))))
             if all(c['field']=='name' for c in rule.get('conditions',[])):cautions.append('Name-only rule: advertised names can be changed.')
             if all(c['field'] in ('name','company') for c in rule.get('conditions',[])):cautions.append('A company identifier is manufacturer context, not a confirmed device model.')
         elif str(hit.get('rule','')).startswith('watch-'):cautions.append('A local watchlist match is not a device-model identification.')
+        if hit.get('rule') in row.get('signature_last_seen',{}) and hit.get('rule') not in row.get('current_rule_ids',[]):
+            cautions.append('Some signatures were observed earlier in this session and may be absent from the latest packet.')
         source=hit.get('source','')
         try:source=reference_url(source)
         except ValueError:source=''
